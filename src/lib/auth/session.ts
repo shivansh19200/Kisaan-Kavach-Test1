@@ -23,16 +23,6 @@ export async function createSession(payload: Omit<SessionPayload, 'exp'>) {
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
   const db = getDb();
   db.prepare('INSERT INTO sessions (user_id, token, expires_at) VALUES (?, ?, ?)').run(payload.userId, token, expiresAt);
-
-  const cookieStore = await cookies();
-  cookieStore.set('session', token, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 7 * 24 * 60 * 60,
-    path: '/',
-  });
-
   return token;
 }
 

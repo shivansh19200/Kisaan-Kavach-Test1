@@ -17,9 +17,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    await createSession({ userId: user.id, email: user.email, role: user.role as 'BUYER' | 'SELLER' | 'ARBITER', language: user.language as 'en' | 'hi' | 'mr' });
+    const token = await createSession({ userId: user.id, email: user.email, role: user.role as 'BUYER' | 'SELLER' | 'ARBITER', language: user.language as 'en' | 'hi' | 'mr' });
 
-    return NextResponse.json({ success: true, role: user.role, language: user.language });
+    const response = NextResponse.json({ success: true, role: user.role, language: user.language });
+    response.cookies.set('session', token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 7 * 24 * 60 * 60,
+      path: '/',
+    });
+    return response;
   } catch (err) {
     console.error('Login error:', err);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { t, setLang, getLang, SUPPORTED_LANGS } from '@/lib/i18n/t';
 import { cn } from '@/lib/utils';
 import { Shield, Leaf, Eye, EyeOff, Loader2 } from 'lucide-react';
@@ -16,7 +16,6 @@ const demoRoles = [
 ];
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<'signin' | 'demo'>('signin');
   const [email, setEmail] = useState('');
@@ -45,8 +44,7 @@ function LoginForm() {
       localStorage.setItem('kavach-lang', data.language);
       localStorage.setItem('kavach-lang-chosen', 'true');
       setLang(data.language);
-      router.push(callbackUrl);
-      router.refresh();
+      window.location.assign(callbackUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('errors.serverError'));
     } finally {
@@ -68,8 +66,7 @@ function LoginForm() {
       localStorage.setItem('kavach-lang', data.language);
       localStorage.setItem('kavach-lang-chosen', 'true');
       setLang(data.language);
-      router.push(callbackUrl);
-      router.refresh();
+      window.location.assign(callbackUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('errors.serverError'));
     } finally {
