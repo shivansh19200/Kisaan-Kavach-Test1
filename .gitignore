@@ -1,0 +1,12 @@
+
+.env
+.env.*
+!.env.example
+*.db
+*.db-journal
+*.db-wal
+data/
+*.tsbuildinfo
+*.log
+node_modules
+.next

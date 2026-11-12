@@ -1,0 +1,60 @@
+{
+  "name": "kisaan-kavach",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint src",
+    "check": "eslint src && tsc --noEmit",
+    "check:locales": "python scripts/check-locales.py",
+    "test": "vitest run --reporter=dot",
+    "db:reset": "tsx --env-file=.env scripts/reset-db.ts"
+  },
+  "dependencies": {
+    "bcryptjs": "3.0.3",
+    "better-sqlite3": "13.1.1",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "decimal.js": "10.6.0",
+    "jose": "6.2.17",
+    "jpeg-js": "0.4.4",
+    "jsqr": "1.4.0",
+    "lucide-react": "1.72.0",
+    "next": "16.4.5",
+    "pngjs": "7.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "server-only": "0.0.1",
+    "tailwind-merge": "3.7.0",
+    "tailwindcss": "^4.3.5",
+    "unpdf": "2.1.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.5",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^22.12.0",
+    "@types/pngjs": "^6.0.5",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "eslint": "^9.0.0",
+    "eslint-config-next": "16.4.5",
+    "pdf-lib": "^1.17.1",
+    "qrcode": "^1.5.4",
+    "tsx": "^4.23.15",
+    "typescript": "^5.0.0",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0"
+  },
+  "allowScripts": {
+    "better-sqlite3@13.1.1": true,
+    "esbuild@0.28.2": true
+  }
+}

@@ -1,0 +1,47 @@
+services:
+  - type: web
+    name: kisaan-kavach
+    env: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: PAYPAL_API_BASE
+        value: https://api-m.sandbox.paypal.com
+      - key: LLM_BASE_URL
+        sync: false
+      - key: LLM_API_KEY
+        sync: false
+      - key: LLM_MODEL
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      - key: DEMO_MODE
+        value: "true"
+      - key: APP_URL
+        value: https://kisaan-kavach.onrender.com
+      - key: CAPTURE_MODE
+        value: TWO_STAGE
+      - key: ADVANCE_PCT
+        value: "30"
+      - key: HOLD_DEFAULT_DAYS
+        value: "29"
+      - key: HONOR_DAYS
+        value: "3"
+      - key: DISPUTE_WINDOW_DAYS
+        value: "7"
+      - key: DISPUTE_WINDOW_MINUTES_DEMO
+        value: "10"
+      - key: LAB_REGISTRY_PUBLIC_KEYS
+        sync: false
+      - key: SUPPORTED_LANGS
+        value: en,hi,mr
+      - key: DEFAULT_LANG
+        value: en
+    autoDeploy: true
