@@ -1,10 +1,12 @@
 import { t } from '@/lib/i18n/t';
+import type { SupportedLang } from '@/lib/i18n/t';
 import { cn } from '@/lib/utils';
 
 interface StatusBadgeProps {
   status: string;
   className?: string;
   simple?: boolean;
+  language?: SupportedLang;
 }
 
 const statusConfig: Record<string, { bg: string; text: string; border: string; label: string; simpleLabel: string }> = {
@@ -29,9 +31,9 @@ const statusConfig: Record<string, { bg: string; text: string; border: string; l
   COULD_NOT_CONFIRM: { bg: 'bg-rose-50', text: 'text-rose-800', border: 'border-rose-200', label: 'status.couldNotConfirm', simpleLabel: 'simple.couldNotConfirm.whatHappened' },
 };
 
-export default function StatusBadge({ status, className, simple = false }: StatusBadgeProps) {
+export default function StatusBadge({ status, className, simple = false, language }: StatusBadgeProps) {
   const config = statusConfig[status] || { bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-200', label: 'status.paymentReserved', simpleLabel: 'simple.paymentReserved.whatHappened' };
-  const label = simple ? t(config.simpleLabel) : t(config.label);
+  const label = simple ? t(config.simpleLabel, undefined, language) : t(config.label, undefined, language);
 
   return (
     <span className={cn('inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium border', config.bg, config.text, config.border, className)}>

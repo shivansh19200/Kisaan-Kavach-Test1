@@ -3,13 +3,7 @@
 import { getSession } from '@/lib/auth/session';
 import { getDb } from '@/lib/db/repo';
 import { revalidatePath } from 'next/cache';
-
-function toMinorUnits(value: FormDataEntryValue | null) {
-  if (typeof value !== 'string' || !/^\d+(\.\d{1,2})?$/.test(value)) return null;
-  const [whole, fraction = ''] = value.split('.');
-  const minor = Number(whole) * 100 + Number(fraction.padEnd(2, '0'));
-  return Number.isSafeInteger(minor) && minor > 0 ? minor : null;
-}
+import { calculateUsdMinor } from '@/lib/contract-math';
 
 export async function createOrder(formData: FormData): Promise<number> {
   const session = await getSession();
@@ -19,7 +13,7 @@ export async function createOrder(formData: FormData): Promise<number> {
   const sellerId = Number(formData.get('sellerId'));
   const quantity = String(formData.get('quantity') || '').trim();
   const pricePerKg = Number(formData.get('pricePerKg'));
-  const totalMinor = toMinorUnits(formData.get('totalUsd'));
+  const totalMinor = calculateUsdMinor(quantity, pricePerKg);
   const advancePct = Number(formData.get('advancePct'));
   const batchId = `LOT-${Date.now().toString(36).toUpperCase()}`;
   const sealId = `SEAL-${Date.now().toString(36).toUpperCase()}`;
@@ -29,7 +23,7 @@ export async function createOrder(formData: FormData): Promise<number> {
 
   if (!product || product.length > 100 || !quantity || quantity.length > 50) throw new Error('Enter a product and quantity.');
   if (!Number.isInteger(sellerId) || sellerId < 1) throw new Error('Choose a seller for this order.');
-  if (!Number.isFinite(pricePerKg) || pricePerKg <= 0 || !totalMinor) throw new Error('Enter a valid price and total.');
+  if (!Number.isFinite(pricePerKg) || pricePerKg <= 0 || !totalMinor) throw new Error('Enter a valid quantity (kg, g, or tonnes) and price per kg.');
   if (!Number.isInteger(advancePct) || advancePct < 1 || advancePct > 99) throw new Error('First payment must be between 1% and 99%.');
 
   let qualityLimits: Array<{ name: string; max?: number; min?: number; unit: string }>;

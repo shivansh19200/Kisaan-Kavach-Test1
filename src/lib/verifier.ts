@@ -179,7 +179,7 @@ async function getContractForOrder(orderId: number) {
   return order ? JSON.parse(order.contract_json) : null;
 }
 
-export async function extractUnsignedPdf(text: string, orderId: number, lotNumber: string): Promise<ExtractedLabData> {
+export async function extractUnsignedPdf(text: string): Promise<ExtractedLabData> {
   const containsInstructions = detectInjection(text);
 
   const paramRegex = /([A-Za-z\s]+?)\s*[:\-]?\s*([0-9]+(?:\.[0-9]+)?)\s*([A-Za-z%\/]+)/g;

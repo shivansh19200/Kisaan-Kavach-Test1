@@ -1,6 +1,4 @@
 import { z } from 'zod';
-import { getDb } from './db/repo';
-
 const LLM_BASE_URL = process.env.LLM_BASE_URL?.trim() || '';
 const LLM_API_KEY = process.env.LLM_API_KEY?.trim() || '';
 const LLM_MODEL = process.env.LLM_MODEL?.trim() || '';
@@ -53,31 +51,47 @@ type AIFallbackReason = 'missing_base_url' | 'missing_api_key' | 'missing_model'
 type RecordedAIResult = { _recorded: true; reason: AIFallbackReason };
 type LLMResult<T> = T | RecordedAIResult | { _error: true; error: string };
 
+type ChatMessage = { role: 'user' | 'assistant'; content: string };
+
+async function requestCompletion(messages: ChatMessage[], temperature: number, timeoutMs: number) {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const response = await fetch(LLM_CHAT_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LLM_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ model: LLM_MODEL, messages, temperature }),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+
+    if (response.ok) return response.json();
+
+    if (attempt === 0 && [429, 502, 503, 504].includes(response.status)) {
+      await new Promise((resolve) => setTimeout(resolve, 700));
+      continue;
+    }
+
+    const hint = response.status === 503 || response.status === 502 || response.status === 504
+      ? 'The AI provider is temporarily unavailable. Check its status page or try again shortly.'
+      : response.status === 429
+        ? 'The AI provider rate limit was reached. Check the account quota or try again shortly.'
+        : response.status === 401 || response.status === 403
+          ? 'The AI provider rejected the credentials. Check LLM_API_KEY in Render.'
+          : `Check the provider URL, model name, and API settings. (HTTP ${response.status})`;
+    throw new Error(`AI provider error: ${hint}`);
+  }
+
+  throw new Error('AI provider did not respond. Please try again.');
+}
+
 async function callLLM<T>(prompt: string, schema: z.ZodSchema<T>, temperature = 0, timeoutMs = 20000, repairInvalidJson = true): Promise<LLMResult<T>> {
   if (!LLM_BASE_URL) return { _recorded: true, reason: 'missing_base_url' };
   if (!LLM_API_KEY) return { _recorded: true, reason: 'missing_api_key' };
   if (!LLM_MODEL) return { _recorded: true, reason: 'missing_model' };
 
   try {
-    const res = await fetch(LLM_CHAT_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LLM_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: LLM_MODEL,
-        messages: [{ role: 'user', content: prompt }],
-        temperature,
-      }),
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-
-    if (!res.ok) {
-      throw new Error(`LLM API error: ${res.status}`);
-    }
-
-    const data = await res.json();
+    const data = await requestCompletion([{ role: 'user', content: prompt }], temperature, timeoutMs);
     let content = data.choices?.[0]?.message?.content || '';
 
     content = content.replace(/^```json\s*/, '').replace(/^```\s*/, '').replace(/\s*```$/, '').trim();
@@ -87,31 +101,14 @@ async function callLLM<T>(prompt: string, schema: z.ZodSchema<T>, temperature = 
       parsed = JSON.parse(content);
     } catch {
       if (!repairInvalidJson) throw new Error('The AI response was not valid JSON.');
-      const repairRes = await fetch(LLM_CHAT_URL, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LLM_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: LLM_MODEL,
-          messages: [
-            { role: 'user', content: prompt },
-            { role: 'assistant', content: content },
-            { role: 'user', content: 'The previous response was not valid JSON. Please output only valid JSON matching the schema.' },
-          ],
-          temperature: 0,
-        }),
-        signal: AbortSignal.timeout(timeoutMs),
-      });
-      if (repairRes.ok) {
-        const repairData = await repairRes.json();
-        content = repairData.choices?.[0]?.message?.content || '';
-        content = content.replace(/^```json\s*/, '').replace(/^```\s*/, '').replace(/\s*```$/, '').trim();
-        parsed = JSON.parse(content);
-      } else {
-        throw new Error('Failed to parse LLM output');
-      }
+      const repairData = await requestCompletion([
+        { role: 'user', content: prompt },
+        { role: 'assistant', content },
+        { role: 'user', content: 'The previous response was not valid JSON. Please output only valid JSON matching the schema.' },
+      ], 0, timeoutMs);
+      content = repairData.choices?.[0]?.message?.content || '';
+      content = content.replace(/^```json\s*/, '').replace(/^```\s*/, '').replace(/\s*```$/, '').trim();
+      parsed = JSON.parse(content);
     }
 
     return schema.parse(parsed);

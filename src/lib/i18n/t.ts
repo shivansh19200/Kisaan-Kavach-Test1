@@ -11,6 +11,8 @@ export function setLang(lang: Lang) {
   currentLang = lang;
   if (typeof document !== 'undefined') {
     document.documentElement.lang = lang;
+    const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+    document.cookie = `kavach-lang=${lang}; Path=/; Max-Age=31536000; SameSite=Lax${secure}`;
   }
 }
 

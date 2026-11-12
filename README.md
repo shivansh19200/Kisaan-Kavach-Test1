@@ -81,7 +81,9 @@ See `.env.example` for all variables. Key ones:
 - `CAPTURE_MODE=TWO_STAGE` — or `SINGLE` if preflight shows two-stage fails
 - `LAB_REGISTRY_PUBLIC_KEYS` — JSON object mapping `kid` to Ed25519 public key (PEM format)
 
-If the AI settings are missing or the provider does not return a usable response, the contract page shows a marked sample draft and explains why it used the sample. It never presents the sample as a live AI result.
+The AI draft route retries a temporary provider outage once, then shows a useful error instead of substituting a preset contract. USD totals are calculated from quantity and price per kg on both the form and server.
+
+PayPal transactions remain in USD. The dashboard shows an INR estimate from the latest published reference rate and its date; it is not a live quote or the PayPal settlement amount. PayPal's receiving Business account must accept USD or automatically convert it to the account's holding currency.
 
 ## Real vs Simulated
 

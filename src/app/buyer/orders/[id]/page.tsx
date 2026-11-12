@@ -3,14 +3,17 @@ export const dynamic = 'force-dynamic';
 import { getSession } from '@/lib/auth/session';
 import { redirect, notFound } from 'next/navigation';
 import { getDb } from '@/lib/db/repo';
-import { t, getLang } from '@/lib/i18n/t';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { t } from '@/lib/i18n/t';
+import { getServerLang } from '@/lib/i18n/server';
+import { getUsdInrReferenceRate } from '@/lib/fx';
+import { formatCurrency } from '@/lib/utils';
 import TopBar from '@/components/ui/TopBar';
 import OrderStepper from '@/components/ui/OrderStepper';
 import StatusBadge from '@/components/ui/StatusBadge';
 import FactsStrip from '@/components/ui/FactsStrip';
 import ExplainSimply from '@/components/ui/ExplainSimply';
 import PaymentButton from '@/components/ui/PaymentButton';
+import CurrencyEstimate from '@/components/ui/CurrencyEstimate';
 import { getCurrentAuthorization } from '@/lib/state';
 import { confirmDelivery, reportQualityProblem } from './actions';
 
@@ -68,17 +71,21 @@ export default async function BuyerOrderPage({ params }: { params: Promise<{ id:
   const authorization = getCurrentAuthorization(orderId);
   const currentStep = statusToStep[order.status] || 1;
 
-  const lang = getLang();
+  const [lang, exchangeRate] = await Promise.all([
+    getServerLang(session.language),
+    getUsdInrReferenceRate(),
+  ]);
+  const tr = (key: string) => t(key, undefined, lang);
 
   return (
     <div className="min-h-screen bg-slate-50">
       <TopBar role="BUYER" currentPath={`/buyer/orders/${id}`} />
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-900">Order #{order.id}</h1>
+          <h1 className="text-2xl font-bold text-slate-900">{tr('dashboard.orderNumber').replace('{id}', String(order.id))}</h1>
           <p className="text-slate-600">{contract.product} — {contract.quantity}</p>
           <p className="mt-2 text-sm text-slate-600">
-            {t('buyer.contract.sellerForOrder')}: {t(order.seller_language === 'mr' ? 'buyer.contract.marathiSeller' : 'buyer.contract.hindiSeller')} ({order.seller_email})
+            {tr('buyer.contract.sellerForOrder')}: {tr(order.seller_language === 'mr' ? 'buyer.contract.marathiSeller' : 'buyer.contract.hindiSeller')} ({order.seller_email})
           </p>
         </div>
 
@@ -87,8 +94,8 @@ export default async function BuyerOrderPage({ params }: { params: Promise<{ id:
         <div className="mt-6 space-y-6">
           <div className="bg-white rounded-2xl border border-slate-200 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-slate-900">{t('buyer.orderStatus.reservedBanner')}</h2>
-              <StatusBadge status={order.status} />
+              <h2 className="text-lg font-semibold text-slate-900">{tr('buyer.orderStatus.reservedBanner')}</h2>
+              <StatusBadge status={order.status} language={lang} />
             </div>
             <FactsStrip
               reservedMinor={totalMinor}
@@ -96,14 +103,15 @@ export default async function BuyerOrderPage({ params }: { params: Promise<{ id:
               finalPaymentMinor={finalPaymentMinor}
               reservedUntil={authorization?.expiration_time}
             />
-            {authorization && <p className="mt-4 text-sm text-slate-500">{t('buyer.orderStatus.paypalReference')}: <span className="font-mono text-slate-700">{authorization.paypal_authorization_id}</span></p>}
+            <CurrencyEstimate amountMinor={totalMinor} reference={exchangeRate} language={lang} />
+            {authorization && <p className="mt-4 text-sm text-slate-500">{tr('buyer.orderStatus.paypalReference')}: <span className="font-mono text-slate-700">{authorization.paypal_authorization_id}</span></p>}
             <ExplainSimply
               stateKey={order.status}
-              normalText={t(statusMessages[order.status] || t('status.paymentReserved'))}
+              normalText={tr(statusMessages[order.status] || 'status.paymentReserved')}
               simpleText={{
-                whatHappened: t(statusMessages[order.status] || t('simple.paymentReserved.whatHappened')),
-                whatItMeans: t(statusMessages[order.status]?.replace('whatHappened', 'whatItMeans') || t('simple.paymentReserved.whatItMeans')),
-                whatToDo: t(statusMessages[order.status]?.replace('whatHappened', 'whatToDo') || t('simple.paymentReserved.whatToDo')),
+                whatHappened: tr(statusMessages[order.status] || 'simple.paymentReserved.whatHappened'),
+                whatItMeans: tr(statusMessages[order.status]?.replace('whatHappened', 'whatItMeans') || 'simple.paymentReserved.whatItMeans'),
+                whatToDo: tr(statusMessages[order.status]?.replace('whatHappened', 'whatToDo') || 'simple.paymentReserved.whatToDo'),
               }}
               factsStrip={<FactsStrip reservedMinor={totalMinor} firstPaymentMinor={firstPaymentMinor} finalPaymentMinor={finalPaymentMinor} reservedUntil={authorization?.expiration_time} />}
             />
@@ -111,18 +119,18 @@ export default async function BuyerOrderPage({ params }: { params: Promise<{ id:
 
           {['VERIFY_PENDING', 'AWAITING_APPROVAL', 'LAB_PASSED', 'PARTIALLY_CAPTURED', 'DELIVERED'].includes(order.status) && (
             <div className="bg-white rounded-2xl border border-slate-200 p-6">
-              <h2 className="text-lg font-semibold text-slate-900 mb-4">{t('buyer.orderStatus.labReportCard')}</h2>
+              <h2 className="text-lg font-semibold text-slate-900 mb-4">{tr('buyer.orderStatus.labReportCard')}</h2>
               <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-                <p className="text-slate-600">Lab report: {order.status === 'AWAITING_APPROVAL' ? t('status.scannedLabReport') : t('status.certifiedLabFile')}</p>
+                <p className="text-slate-600">{tr('buyer.orderStatus.reportPrefix')} {order.status === 'AWAITING_APPROVAL' ? tr('status.scannedLabReport') : tr('status.certifiedLabFile')}</p>
                 {order.status === 'AWAITING_APPROVAL' && (
                   <div className="mt-4 flex gap-3">
                     <form action="/api/lab/approve" method="POST">
                       <input type="hidden" name="orderId" value={orderId} />
-                      <button type="submit" className="px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium min-h-[48px]">{t('buyer.orderStatus.approve')}</button>
+                      <button type="submit" className="px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium min-h-[48px]">{tr('buyer.orderStatus.approve')}</button>
                     </form>
                     <form action="/api/lab/reject" method="POST">
                       <input type="hidden" name="orderId" value={orderId} />
-                      <button type="submit" className="px-4 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 font-medium min-h-[48px]">{t('buyer.orderStatus.reject')}</button>
+                      <button type="submit" className="px-4 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 font-medium min-h-[48px]">{tr('buyer.orderStatus.reject')}</button>
                     </form>
                   </div>
                 )}
@@ -131,14 +139,14 @@ export default async function BuyerOrderPage({ params }: { params: Promise<{ id:
           )}
 
           <div className="bg-white rounded-2xl border border-slate-200 p-6 flex gap-3">
-            {order.status === 'LAB_PASSED' && <PaymentButton orderId={orderId} stage={1} amount={formatCurrency(firstPaymentMinor)} />}
-            {order.status === 'DELIVERED' && <PaymentButton orderId={orderId} stage={2} amount={formatCurrency(finalPaymentMinor)} />}
+            {order.status === 'LAB_PASSED' && <PaymentButton orderId={orderId} stage={1} amount={formatCurrency(firstPaymentMinor, 'USD', lang)} />}
+            {order.status === 'DELIVERED' && <PaymentButton orderId={orderId} stage={2} amount={formatCurrency(finalPaymentMinor, 'USD', lang)} />}
             {order.status === 'PARTIALLY_CAPTURED' && (
               <form action={confirmDelivery}>
                 <input type="hidden" name="orderId" value={orderId} />
                 <button type="submit" className="flex-1 px-6 py-3 rounded-lg bg-emerald-600 text-white font-medium min-h-[48px] flex items-center justify-center gap-2 hover:bg-emerald-700 transition">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
-                  {t('buyer.orderStatus.confirmDelivery')}
+                  {tr('buyer.orderStatus.confirmDelivery')}
                 </button>
               </form>
             )}
@@ -147,7 +155,7 @@ export default async function BuyerOrderPage({ params }: { params: Promise<{ id:
                 <input type="hidden" name="orderId" value={orderId} />
                 <button type="submit" className="flex-1 px-6 py-3 rounded-lg border-2 border-rose-500 bg-white text-rose-600 font-medium min-h-[48px] flex items-center justify-center gap-2 hover:bg-rose-50 transition">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                  {t('buyer.orderStatus.reportProblem')}
+                  {tr('buyer.orderStatus.reportProblem')}
                 </button>
               </form>
             )}

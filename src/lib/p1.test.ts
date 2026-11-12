@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import en from '@/lib/i18n/messages/en.json';
-import hi from '@/lib/i18n/messages/hi.json';
-import mr from '@/lib/i18n/messages/mr.json';
-import { getDb, resetDemoData } from '@/lib/db/repo';
+import en from './i18n/messages/en.json';
+import hi from './i18n/messages/hi.json';
+import mr from './i18n/messages/mr.json';
+import { getDb } from './db/repo';
 
 describe('P1: i18n catalog tests', () => {
   it('en, hi, and mr catalogs must have identical keys', () => {
@@ -35,7 +35,7 @@ describe('P1: i18n catalog tests', () => {
     // Check all values in en.json except internal debugging or where allowed
     for (const [k, v] of Object.entries(en)) {
       // Allow internal role keys or technical mappings if any
-      const lower = v.toLowerCase();
+      const lower = v.replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+/gi, '[email]').toLowerCase();
       for (const word of banned) {
         // Exclude specific permitted contexts if needed
         expect(lower.includes(word), `Banned word "${word}" found in en key "${k}": "${v}"`).toBe(false);

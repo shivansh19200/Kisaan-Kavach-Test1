@@ -2,14 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { Volume2 } from 'lucide-react';
-import { t, setLang, SUPPORTED_LANGS, getLang } from '@/lib/i18n/t';
-import { useRouter, usePathname } from 'next/navigation';
+import { t, setLang, SUPPORTED_LANGS } from '@/lib/i18n/t';
 
 export default function LanguageChooser() {
   const [show, setShow] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const router = useRouter();
-  const pathname = usePathname();
 
   useEffect(() => {
     setMounted(true);
@@ -24,7 +21,7 @@ export default function LanguageChooser() {
     localStorage.setItem('kavach-lang', lang);
     localStorage.setItem('kavach-lang-chosen', 'true');
     setShow(false);
-    router.refresh();
+    window.location.reload();
   };
 
   const speakLanguage = (lang: 'en' | 'hi' | 'mr') => {

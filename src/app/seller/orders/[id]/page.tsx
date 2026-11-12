@@ -4,12 +4,15 @@ import { getSession } from '@/lib/auth/session';
 import { redirect, notFound } from 'next/navigation';
 import { getDb } from '@/lib/db/repo';
 import { t } from '@/lib/i18n/t';
+import { getServerLang } from '@/lib/i18n/server';
+import { getUsdInrReferenceRate } from '@/lib/fx';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import TopBar from '@/components/ui/TopBar';
 import StatusBadge from '@/components/ui/StatusBadge';
 import FactsStrip from '@/components/ui/FactsStrip';
 import ExplainSimply from '@/components/ui/ExplainSimply';
 import UploadDropzone from '@/components/ui/UploadDropzone';
+import CurrencyEstimate from '@/components/ui/CurrencyEstimate';
 
 const sellerStatusMessages: Record<string, { normal: string; simple: { whatHappened: string; whatItMeans: string; whatToDo: string } }> = {
   CREATED: {
@@ -81,23 +84,26 @@ export default async function SellerOrderPage({ params }: { params: Promise<{ id
   const firstPaymentMinor = Math.floor(totalMinor * order.advance_pct / 100);
   const finalPaymentMinor = totalMinor - firstPaymentMinor;
 
-  const lang = session.language;
+  const [lang, exchangeRate] = await Promise.all([
+    getServerLang(session.language),
+    getUsdInrReferenceRate(),
+  ]);
   const msg = sellerStatusMessages[order.status] || sellerStatusMessages.CREATED;
-  const pageText = (key: string) => t(key, undefined, session.language);
+  const pageText = (key: string, params?: Record<string, string | number>) => t(key, params, lang);
 
   return (
     <div className="min-h-screen bg-slate-50">
       <TopBar role="SELLER" currentPath={`/seller/orders/${id}`} />
       <main className="max-w-md mx-auto px-4 py-6">
         <div className="mb-6">
-          <h1 className="text-xl font-bold text-slate-900">Order #{order.id}</h1>
+          <h1 className="text-xl font-bold text-slate-900">{pageText('dashboard.orderNumber', { id: order.id })}</h1>
           <p className="text-slate-600">{contract.product} — {contract.quantity}</p>
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-200 p-5 mb-4">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-base font-semibold text-slate-900">{pageText('seller.orderStatus.messageCard')}</h2>
-            <StatusBadge status={order.status} />
+            <StatusBadge status={order.status} language={lang} />
           </div>
           <ExplainSimply
             stateKey={order.status}
@@ -116,6 +122,7 @@ export default async function SellerOrderPage({ params }: { params: Promise<{ id
               />
             }
           />
+          <CurrencyEstimate amountMinor={totalMinor} reference={exchangeRate} language={lang} />
         </div>
 
         {['CREATED', 'AUTHORIZED', 'VERIFY_PENDING', 'AWAITING_APPROVAL'].includes(order.status) && (
@@ -161,27 +168,27 @@ export default async function SellerOrderPage({ params }: { params: Promise<{ id
               <tbody>
                 <tr className="border-b border-slate-100">
                   <td className="px-3 py-2">{formatDate(order.created_at, lang)}</td>
-                  <td className="px-3 py-2">{pageText('seller.orderStatus.paymentTypes.firstPayment')}</td>
-                  <td className="px-3 py-2 font-medium tabular-nums">{formatCurrency(firstPaymentMinor)}</td>
+                  <td className="px-3 py-2">{pageText('dashboard.firstPayment', { percent: order.advance_pct || 30 })}</td>
+                  <td className="px-3 py-2 font-medium tabular-nums">{formatCurrency(firstPaymentMinor, 'USD', lang)}</td>
                   <td className="px-3 py-2">
                     {['PARTIALLY_CAPTURED', 'DELIVERED', 'DISPUTED', 'REFUNDED', 'FULLY_CAPTURED'].includes(order.status) ? (
-                      <span className="px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700">Paid</span>
+                      <span className="px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700">{pageText('seller.orderStatus.paid')}</span>
                     ) : (
-                      <span className="px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-700">Pending</span>
+                      <span className="px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-700">{pageText('seller.orderStatus.pending')}</span>
                     )}
                   </td>
                 </tr>
                 <tr>
                   <td className="px-3 py-2">—</td>
-                  <td className="px-3 py-2">{pageText('seller.orderStatus.paymentTypes.finalPayment')}</td>
-                  <td className="px-3 py-2 font-medium tabular-nums">{formatCurrency(finalPaymentMinor)}</td>
+                  <td className="px-3 py-2">{pageText('dashboard.finalPayment', { percent: 100 - (order.advance_pct || 30) })}</td>
+                  <td className="px-3 py-2 font-medium tabular-nums">{formatCurrency(finalPaymentMinor, 'USD', lang)}</td>
                   <td className="px-3 py-2">
                     {order.status === 'FULLY_CAPTURED' ? (
-                      <span className="px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700">Paid</span>
+                      <span className="px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700">{pageText('seller.orderStatus.paid')}</span>
                     ) : order.status === 'REFUNDED' ? (
-                      <span className="px-2 py-0.5 text-xs rounded-full bg-rose-100 text-rose-700">Cancelled</span>
+                      <span className="px-2 py-0.5 text-xs rounded-full bg-rose-100 text-rose-700">{pageText('status.reservationCancelled')}</span>
                     ) : (
-                      <span className="px-2 py-0.5 text-xs rounded-full bg-slate-100 text-slate-600">Reserved</span>
+                      <span className="px-2 py-0.5 text-xs rounded-full bg-slate-100 text-slate-600">{pageText('status.paymentReserved')}</span>
                     )}
                   </td>
                 </tr>

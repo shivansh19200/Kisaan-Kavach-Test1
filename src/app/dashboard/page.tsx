@@ -4,12 +4,14 @@ import { getSession } from '@/lib/auth/session';
 import { redirect } from 'next/navigation';
 import { getDb } from '@/lib/db/repo';
 import Link from 'next/link';
-import { t, getLang } from '@/lib/i18n/t';
+import { t } from '@/lib/i18n/t';
+import { getServerLang } from '@/lib/i18n/server';
+import { getUsdInrReferenceRate } from '@/lib/fx';
+import CurrencyEstimate from '@/components/ui/CurrencyEstimate';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { Shield, Package, Gavel, Plus, Eye } from 'lucide-react';
 import TopBar from '@/components/ui/TopBar';
 import StatusBadge from '@/components/ui/StatusBadge';
-import { createOrder } from '@/app/buyer/orders/new/actions';
 
 const roleConfig = {
   BUYER: { label: 'topbar.role.buyer', icon: Shield },
@@ -39,7 +41,20 @@ export default async function DashboardPage() {
     orders = db.prepare("SELECT * FROM orders WHERE status = 'DISPUTED' ORDER BY updated_at DESC").all() as any[];
   }
 
-  const lang = getLang();
+  const [lang, exchangeRate] = await Promise.all([
+    getServerLang(session.language),
+    getUsdInrReferenceRate(),
+  ]);
+  const roleSubtitle = session.role === 'BUYER'
+    ? 'dashboard.yourOrders'
+    : session.role === 'SELLER'
+      ? 'dashboard.assignedOrders'
+      : 'dashboard.disputesToReview';
+  const emptyDescription = session.role === 'BUYER'
+    ? 'dashboard.emptyBuyer'
+    : session.role === 'SELLER'
+      ? 'dashboard.emptySeller'
+      : 'dashboard.emptyReviewer';
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -47,10 +62,9 @@ export default async function DashboardPage() {
       <main className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">{t('app.name')} — {t(config.label)}</h1>
-            <p className="mt-1 text-slate-600">
-              {session.role === 'BUYER' ? 'Your orders' : session.role === 'SELLER' ? 'Orders assigned to you' : 'Disputes to review'}
-            </p>
+            <h1 className="text-2xl font-bold text-slate-900">{t('app.name', undefined, lang)} — {t(config.label, undefined, lang)}</h1>
+            <p className="mt-1 text-slate-600">{t(roleSubtitle, undefined, lang)}</p>
+            {session.role !== 'ARBITER' && <p className="mt-2 max-w-3xl text-xs text-slate-500">{t('currency.paypalNote', undefined, lang)}</p>}
           </div>
           {session.role === 'BUYER' && (
             <Link
@@ -58,7 +72,7 @@ export default async function DashboardPage() {
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium min-h-[48px] hover:bg-emerald-700 transition"
             >
               <Plus className="w-5 h-5" />
-              <span>{t('buyer.contract.title')}</span>
+              <span>{t('buyer.contract.title', undefined, lang)}</span>
             </Link>
           )}
         </div>
@@ -66,10 +80,8 @@ export default async function DashboardPage() {
         {orders.length === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
             <config.icon className="w-16 h-16 mx-auto text-slate-300 mb-4" />
-            <h2 className="text-xl font-semibold text-slate-900 mb-2">No orders yet</h2>
-            <p className="text-slate-500">
-              {session.role === 'BUYER' ? 'Create your first order to get started' : session.role === 'SELLER' ? 'Orders will appear here when assigned' : 'No disputes to review'}
-            </p>
+            <h2 className="text-xl font-semibold text-slate-900 mb-2">{t('dashboard.noOrders', undefined, lang)}</h2>
+            <p className="text-slate-500">{t(emptyDescription, undefined, lang)}</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -89,24 +101,25 @@ export default async function DashboardPage() {
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-lg font-semibold text-slate-900 truncate">Order #{order.id} — {contract.product}</h3>
-                        <StatusBadge status={order.status} />
+                        <h3 className="text-lg font-semibold text-slate-900 truncate">{t('dashboard.orderTitle', { id: order.id, product: contract.product }, lang)}</h3>
+                        <StatusBadge status={order.status} language={lang} />
                       </div>
-                      <p className="text-sm text-slate-600">{contract.quantity} @ ${contract.price_per_kg_usd}/kg = {formatCurrency(totalMinor)}</p>
-                      {session.role === 'BUYER' && <p className="mt-1 text-sm text-slate-600">{t('buyer.contract.sellerForOrder')}: {t(order.seller_language === 'mr' ? 'buyer.contract.marathiSeller' : 'buyer.contract.hindiSeller')} ({order.seller_email})</p>}
+                      <p className="text-sm text-slate-600">{t('dashboard.priceLine', { quantity: contract.quantity, price: formatCurrency(Math.round(contract.price_per_kg_usd * 100), 'USD', lang), total: formatCurrency(totalMinor, 'USD', lang) }, lang)}</p>
+                      {session.role === 'BUYER' && <p className="mt-1 text-sm text-slate-600">{t('buyer.contract.sellerForOrder', undefined, lang)}: {t(order.seller_language === 'mr' ? 'buyer.contract.marathiSeller' : 'buyer.contract.hindiSeller', undefined, lang)} ({order.seller_email})</p>}
+                      {session.role !== 'ARBITER' && <CurrencyEstimate amountMinor={totalMinor} reference={exchangeRate} language={lang} />}
                       <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
-                        <span>Created: {formatDate(order.created_at, lang)}</span>
-                        {order.lab_deadline && <span>Lab deadline: {formatDate(order.lab_deadline, lang)}</span>}
+                        <span>{t('dashboard.created', { date: formatDate(order.created_at, lang) }, lang)}</span>
+                        {order.lab_deadline && <span>{t('dashboard.labDeadline', { date: formatDate(order.lab_deadline, lang) }, lang)}</span>}
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-2">
                       <div className="text-right">
-                        <p className="text-lg font-semibold text-slate-900">{formatCurrency(firstPaymentMinor)}</p>
-                        <p className="text-xs text-slate-500">First payment (30%)</p>
+                        <p className="text-lg font-semibold text-slate-900">{formatCurrency(firstPaymentMinor, 'USD', lang)}</p>
+                        <p className="text-xs text-slate-500">{t('dashboard.firstPayment', { percent: advancePct }, lang)}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-lg font-semibold text-slate-900">{formatCurrency(finalPaymentMinor)}</p>
-                        <p className="text-xs text-slate-500">Final payment (70%)</p>
+                        <p className="text-lg font-semibold text-slate-900">{formatCurrency(finalPaymentMinor, 'USD', lang)}</p>
+                        <p className="text-xs text-slate-500">{t('dashboard.finalPayment', { percent: 100 - advancePct }, lang)}</p>
                       </div>
                       <Eye className="w-5 h-5 text-slate-400" />
                     </div>

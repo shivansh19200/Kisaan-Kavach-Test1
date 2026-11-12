@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
         result = await verifySignedJWS(jwsMatch[0], orderId, lotNumber, sealNumber);
       } else {
         // Unsigned PDF path
-        const extracted = await extractUnsignedPdf(fullText, orderId, lotNumber);
+        const extracted = await extractUnsignedPdf(fullText);
         result = await verifyUnsignedExtraction(extracted, orderId, lotNumber, fileSha256, fullText);
       }
     } else {

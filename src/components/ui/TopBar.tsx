@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, LogOut } from 'lucide-react';
-import { t, getLang, setLang, SUPPORTED_LANGS } from '@/lib/i18n/t';
+import { t, setLang, SUPPORTED_LANGS } from '@/lib/i18n/t';
 
 export default function TopBar({ role, currentPath }: { role: 'BUYER' | 'SELLER' | 'ARBITER'; currentPath: string }) {
   const [lang, setLangState] = useState<'en' | 'hi' | 'mr'>('en');
@@ -25,6 +25,7 @@ export default function TopBar({ role, currentPath }: { role: 'BUYER' | 'SELLER'
     localStorage.setItem('kavach-lang', newLang);
     document.documentElement.lang = newLang;
     setShowLangMenu(false);
+    window.location.reload();
   };
 
   const toggleAudio = () => {
