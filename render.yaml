@@ -12,6 +12,8 @@ services:
         sync: false
       - key: PAYPAL_CLIENT_SECRET
         sync: false
+      - key: PAYPAL_MERCHANT_EMAIL
+        sync: false
       - key: PAYPAL_API_BASE
         value: https://api-m.sandbox.paypal.com
       - key: LLM_BASE_URL

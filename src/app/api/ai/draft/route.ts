@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { draftContract, isRecordedAI, RECORDED_CONTRACT } from '@/lib/ai';
+import { draftContract } from '@/lib/ai';
 import { getSession } from '@/lib/auth/session';
 
 export async function POST(req: NextRequest) {
@@ -14,10 +14,6 @@ export async function POST(req: NextRequest) {
     }
 
     const result = await draftContract(plainTerms);
-
-    if (isRecordedAI(result)) {
-      return NextResponse.json({ ...RECORDED_CONTRACT, _recorded: true, _fallbackReason: result.reason });
-    }
 
     if ('_error' in result) {
       return NextResponse.json({ error: result.error || 'The AI provider could not draft this contract. Check its Render settings.' }, { status: 503 });

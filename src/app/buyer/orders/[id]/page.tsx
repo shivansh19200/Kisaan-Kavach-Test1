@@ -13,6 +13,7 @@ import StatusBadge from '@/components/ui/StatusBadge';
 import FactsStrip from '@/components/ui/FactsStrip';
 import ExplainSimply from '@/components/ui/ExplainSimply';
 import PaymentButton from '@/components/ui/PaymentButton';
+import StartPaymentButton from '@/components/ui/StartPaymentButton';
 import CurrencyEstimate from '@/components/ui/CurrencyEstimate';
 import { getCurrentAuthorization } from '@/lib/state';
 import { confirmDelivery, reportQualityProblem } from './actions';
@@ -34,7 +35,7 @@ const statusToStep: Record<string, number> = {
 };
 
 const statusMessages: Record<string, string> = {
-  CREATED: 'simple.paymentReserved.whatHappened',
+  CREATED: 'simple.paymentNotReserved.whatHappened',
   AUTHORIZED: 'simple.paymentReserved.whatHappened',
   VERIFY_PENDING: 'simple.checkingReport.whatHappened',
   AWAITING_APPROVAL: 'simple.awaitingApproval.whatHappened',
@@ -49,10 +50,10 @@ const statusMessages: Record<string, string> = {
   VOIDED: 'simple.reservationCancelled.whatHappened',
 };
 
-export default async function BuyerOrderPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function BuyerOrderPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ payment?: string; paypal?: string }> }) {
   const session = await getSession();
   if (!session || session.role !== 'BUYER') redirect('/login');
-  const { id } = await params;
+  const [{ id }, query] = await Promise.all([params, searchParams]);
   const orderId = parseInt(id);
 
   const db = getDb();
@@ -94,17 +95,19 @@ export default async function BuyerOrderPage({ params }: { params: Promise<{ id:
         <div className="mt-6 space-y-6">
           <div className="bg-white rounded-2xl border border-slate-200 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-slate-900">{tr('buyer.orderStatus.reservedBanner')}</h2>
+              <h2 className="text-lg font-semibold text-slate-900">{tr(order.status === 'CREATED' ? 'buyer.orderStatus.paymentNotReserved' : 'buyer.orderStatus.reservedBanner')}</h2>
               <StatusBadge status={order.status} language={lang} />
             </div>
             <FactsStrip
-              reservedMinor={totalMinor}
+              reservedMinor={order.status === 'CREATED' ? undefined : totalMinor}
               firstPaymentMinor={firstPaymentMinor}
               finalPaymentMinor={finalPaymentMinor}
               reservedUntil={authorization?.expiration_time}
             />
             <CurrencyEstimate amountMinor={totalMinor} reference={exchangeRate} language={lang} />
             {authorization && <p className="mt-4 text-sm text-slate-500">{tr('buyer.orderStatus.paypalReference')}: <span className="font-mono text-slate-700">{authorization.paypal_authorization_id}</span></p>}
+            {order.status === 'CREATED' && (query.payment === 'failed' || query.paypal === 'cancel') && <p role="alert" className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900">{tr('buyer.orderStatus.paymentFailed')}</p>}
+            {order.status === 'CREATED' && query.payment === 'checking' && <p role="status" className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">{tr('buyer.orderStatus.paymentChecking')}</p>}
             <ExplainSimply
               stateKey={order.status}
               normalText={tr(statusMessages[order.status] || 'status.paymentReserved')}
@@ -139,6 +142,7 @@ export default async function BuyerOrderPage({ params }: { params: Promise<{ id:
           )}
 
           <div className="bg-white rounded-2xl border border-slate-200 p-6 flex gap-3">
+            {order.status === 'CREATED' && <StartPaymentButton orderId={orderId} language={lang} />}
             {order.status === 'LAB_PASSED' && <PaymentButton orderId={orderId} stage={1} amount={formatCurrency(firstPaymentMinor, 'USD', lang)} />}
             {order.status === 'DELIVERED' && <PaymentButton orderId={orderId} stage={2} amount={formatCurrency(finalPaymentMinor, 'USD', lang)} />}
             {order.status === 'PARTIALLY_CAPTURED' && (

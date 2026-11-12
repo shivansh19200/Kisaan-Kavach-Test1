@@ -10,7 +10,7 @@ interface StatusBadgeProps {
 }
 
 const statusConfig: Record<string, { bg: string; text: string; border: string; label: string; simpleLabel: string }> = {
-  CREATED: { bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-200', label: 'status.paymentReserved', simpleLabel: 'simple.paymentReserved.whatHappened' },
+  CREATED: { bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-200', label: 'status.paymentNotReserved', simpleLabel: 'simple.paymentNotReserved.whatHappened' },
   AUTHORIZED: { bg: 'bg-amber-50', text: 'text-amber-800', border: 'border-amber-200', label: 'status.paymentReserved', simpleLabel: 'simple.paymentReserved.whatHappened' },
   VERIFY_PENDING: { bg: 'bg-blue-50', text: 'text-blue-800', border: 'border-blue-200', label: 'status.checkingReport', simpleLabel: 'simple.checkingReport.whatHappened' },
   AWAITING_APPROVAL: { bg: 'bg-purple-50', text: 'text-purple-800', border: 'border-purple-200', label: 'status.awaitingApproval', simpleLabel: 'simple.awaitingApproval.whatHappened' },

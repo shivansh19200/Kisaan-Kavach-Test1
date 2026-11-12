@@ -1,4 +1,5 @@
 import "server-only";
+import { randomUUID } from 'node:crypto';
 
 export interface PaypalClient {
   createOrder(params: CreateOrderParams): Promise<CreateOrderResult>;
@@ -139,9 +140,11 @@ class RealPaypalClient implements PaypalClient {
   }
 
   async createOrder(params: CreateOrderParams): Promise<CreateOrderResult> {
+    const merchantEmail = process.env.PAYPAL_MERCHANT_EMAIL?.trim();
     const body = {
       intent: 'AUTHORIZE',
       purchase_units: [{
+        ...(merchantEmail ? { payee: { email_address: merchantEmail } } : {}),
         amount: { currency_code: params.currency, value: (params.totalMinor / 100).toFixed(2) },
         custom_id: params.customId,
       }],
@@ -154,7 +157,7 @@ class RealPaypalClient implements PaypalClient {
     const data = await this.request<{ id: string; status: string; links: Array<{ rel: string; href: string }> }>(
       '/v2/checkout/orders',
       { method: 'POST', body: JSON.stringify(body) },
-      `order:${params.orderId}:create`
+      randomUUID()
     );
     const approveLink = data.links.find(l => l.rel === 'approve');
     return {

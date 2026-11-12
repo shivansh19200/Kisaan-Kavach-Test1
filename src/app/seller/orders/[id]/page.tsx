@@ -16,8 +16,8 @@ import CurrencyEstimate from '@/components/ui/CurrencyEstimate';
 
 const sellerStatusMessages: Record<string, { normal: string; simple: { whatHappened: string; whatItMeans: string; whatToDo: string } }> = {
   CREATED: {
-    normal: 'status.paymentReserved',
-    simple: { whatHappened: 'simple.paymentReserved.whatHappened', whatItMeans: 'simple.paymentReserved.whatItMeans', whatToDo: 'simple.paymentReserved.whatToDo' },
+    normal: 'status.paymentNotReserved',
+    simple: { whatHappened: 'simple.paymentNotReserved.whatHappened', whatItMeans: 'simple.paymentNotReserved.whatItMeans', whatToDo: 'simple.paymentNotReserved.whatToDo' },
   },
   AUTHORIZED: {
     normal: 'status.paymentReserved',
@@ -118,14 +118,14 @@ export default async function SellerOrderPage({ params }: { params: Promise<{ id
               <FactsStrip
                 firstPaymentMinor={firstPaymentMinor}
                 finalPaymentMinor={finalPaymentMinor}
-                reservedUntil={order.lab_deadline || undefined}
+                reservedUntil={order.status === 'CREATED' ? undefined : order.lab_deadline || undefined}
               />
             }
           />
           <CurrencyEstimate amountMinor={totalMinor} reference={exchangeRate} language={lang} />
         </div>
 
-        {['CREATED', 'AUTHORIZED', 'VERIFY_PENDING', 'AWAITING_APPROVAL'].includes(order.status) && (
+        {['AUTHORIZED', 'VERIFY_PENDING', 'AWAITING_APPROVAL'].includes(order.status) && (
           <div className="bg-white rounded-2xl border border-slate-200 p-5 mb-4">
             <h2 className="text-base font-semibold text-slate-900 mb-3">{pageText('seller.orderStatus.uploadLabReport')}</h2>
             <UploadDropzone
@@ -187,6 +187,8 @@ export default async function SellerOrderPage({ params }: { params: Promise<{ id
                       <span className="px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700">{pageText('seller.orderStatus.paid')}</span>
                     ) : order.status === 'REFUNDED' ? (
                       <span className="px-2 py-0.5 text-xs rounded-full bg-rose-100 text-rose-700">{pageText('status.reservationCancelled')}</span>
+                    ) : order.status === 'CREATED' ? (
+                      <span className="px-2 py-0.5 text-xs rounded-full bg-slate-100 text-slate-600">{pageText('status.paymentNotReserved')}</span>
                     ) : (
                       <span className="px-2 py-0.5 text-xs rounded-full bg-slate-100 text-slate-600">{pageText('status.paymentReserved')}</span>
                     )}
