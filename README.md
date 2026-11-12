@@ -73,10 +73,11 @@ Or click "Reset" on the dashboard (visible in DEMO_MODE).
 
 See `.env.example` for all variables. Key ones:
 
-- `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_API_BASE` — **Required for real PayPal sandbox**
+- `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_API_BASE` — PayPal REST app credentials and API host. Use sandbox credentials with `https://api-m.sandbox.paypal.com` for a demo transaction.
+- `PAYPAL_DEMO_MODE=true` — Uses the in-app simulated payment. Set it to `false` to use PayPal while keeping `DEMO_MODE=true` for the demo buyer/seller logins.
 - `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL` — all three are needed for live AI drafting. Use the provider's OpenAI-compatible base URL; the app adds `/chat/completions` itself. Set `LLM_MODEL` to a model name supported by that provider.
 - `SESSION_SECRET` — 32+ char random string
-- `DEMO_MODE=true` — Enables demo logins and seeded data
+- `DEMO_MODE=true` — Enables demo logins and seeded data; payment simulation is controlled separately by `PAYPAL_DEMO_MODE`.
 - `CAPTURE_MODE=TWO_STAGE` — or `SINGLE` if preflight shows two-stage fails
 - `LAB_REGISTRY_PUBLIC_KEYS` — JSON object mapping `kid` to Ed25519 public key (PEM format)
 

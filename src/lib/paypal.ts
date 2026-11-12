@@ -317,12 +317,14 @@ let clientInstance: PaypalClient | null = null;
 
 export function getPaypalClient(): PaypalClient {
   if (clientInstance) return clientInstance;
-  if (process.env.DEMO_MODE === 'true') {
+  const useMockPayments = process.env.PAYPAL_DEMO_MODE === 'true'
+    || (process.env.PAYPAL_DEMO_MODE !== 'false' && process.env.DEMO_MODE === 'true');
+  if (useMockPayments) {
     clientInstance = new MockPaypalClient();
   } else if (process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET) {
     clientInstance = new RealPaypalClient();
   } else {
-    throw new Error('PayPal credentials are required when demo mode is off.');
+    throw new Error('PayPal Sandbox is not configured. Add PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET in Render, or set PAYPAL_DEMO_MODE=true for simulated payments.');
   }
   return clientInstance;
 }

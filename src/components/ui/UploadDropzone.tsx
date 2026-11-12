@@ -35,12 +35,14 @@ export default function UploadDropzone({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFiles = useCallback(
     async (files: FileList | File[]) => {
       setError(null);
       setSuccess(false);
+      setSuccessMessage('');
       const fileArray = Array.from(files);
       for (const file of fileArray) {
         if (!['application/pdf', 'image/png', 'image/jpeg'].includes(file.type)) {
@@ -65,6 +67,11 @@ export default function UploadDropzone({
             const response = await fetch(uploadPath, { method: 'POST', body: payload });
             const result = await response.json();
             if (!response.ok) throw new Error(result.error || t('errors.serverError'));
+            if (uploadPath === '/api/lab/upload') {
+              setSuccessMessage(t(result.path === 'SIGNED' ? 'seller.labUpload.signedPass' : 'seller.labUpload.unsignedPass'));
+            } else {
+              setSuccessMessage(t('common.success'));
+            }
             router.refresh();
           } else {
             throw new Error(t('errors.serverError'));
@@ -167,7 +174,7 @@ export default function UploadDropzone({
         ) : success ? (
           <div className="flex flex-col items-center gap-3 text-emerald-600">
             <CheckCircle className="w-12 h-12" />
-            <span className="text-base font-medium">{t('common.success')}</span>
+            <span className="text-base font-medium">{successMessage || t('common.success')}</span>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-4 text-center">

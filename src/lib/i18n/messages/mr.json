@@ -159,6 +159,8 @@
   "seller.orderStatus.title": "ऑर्डर स्थिती",
   "seller.orderStatus.messageCard": "संदेश",
   "seller.orderStatus.uploadLabReport": "लॅब रिपोर्ट अपलोड करा",
+  "seller.labUpload.signedPass": "नोंदणीकृत लॅब स्वाक्षरी आणि करार तपासण्या पास झाल्या. पहिले PayPal पेमेंट तयार आहे.",
+  "seller.labUpload.unsignedPass": "गुणवत्ता तपासणी पास झाली, पण अहवालावर स्वाक्षरी नाही. पेमेंटपूर्वी खरेदीदाराने त्याचे पुनरावलोकन करणे आवश्यक आहे.",
   "seller.orderStatus.dragDropOrClick": "फाइल ड्रॅग करून टाका किंवा निवडण्यासाठी क्लिक करा",
   "seller.orderStatus.takePhoto": "फोटो घ्या",
   "seller.orderStatus.chooseFile": "फाइल निवडा",

@@ -148,15 +148,22 @@ export async function verifySignedJWS(payload: string, orderId: number, lotNumbe
       return { path: 'SIGNED', result: 'INCONCLUSIVE', values: { error: 'Contract not found' } };
     }
 
-    let allPass = true;
+    const requiredNames = contract.quality_limits.map((limit: { name: string }) => limit.name.toLowerCase());
+    const seen = new Set<string>();
+    let allPass = requiredNames.length > 0;
     for (const param of data.parameters) {
-      const limit = contract.quality_limits.find((l: any) => l.name.toLowerCase() === param.name.toLowerCase());
+      const parameterName = param.name.toLowerCase();
+      if (seen.has(parameterName)) {
+        return { path: 'SIGNED', result: 'FAIL', values: { error: `Duplicate parameter: ${param.name}` } };
+      }
+      seen.add(parameterName);
+      const limit = contract.quality_limits.find((l: any) => l.name.toLowerCase() === parameterName);
       if (!limit) continue;
       if (!checkValue(limit, param.value, param.unit)) {
         allPass = false;
-        break;
       }
     }
+    if (requiredNames.some((name: string) => !seen.has(name))) allPass = false;
 
     const result = allPass ? 'PASS' : 'FAIL';
     await recordDecision(orderId, await sha256(payload), 'SIGNED', result, JSON.stringify(data));
@@ -188,13 +195,15 @@ export async function extractUnsignedPdf(text: string, orderId: number, lotNumbe
   }
 
   const lotMatch = text.match(/(?:lot|batch)[\s\:#]*([A-Z0-9\-]+)/i);
-  const dateMatch = text.match(/(?:date|issued)[\s\:#]*([0-9]{4}[\-\/][0-9]{2}[\-\/][0-9]{2})/i);
-  const labMatch = text.match(/(?:lab|laboratory)[\s\:#]*([A-Za-z0-9\s]+)/i);
+  const dateMatch = text.match(/(?:date|issued)[\s\:#]*([0-9]{4}[\-\/][0-9]{2}[\-\/][0-9]{2}|[0-9]{2}[\-\/][0-9]{2}[\-\/][0-9]{4})/i);
+  const labMatch = text.match(/(?:lab|laboratory)\s*[:#-]\s*([^\r\n]+)/i);
 
   return {
     labName: labMatch?.[1]?.trim() || 'Unknown Lab',
-    lotNumber: lotMatch?.[1]?.trim() || lotNumber,
-    reportDate: dateMatch?.[1]?.trim() || new Date().toISOString().split('T')[0],
+    // Missing lot information must not be inferred from the order. Doing so
+    // would let an unrelated PDF appear to belong to this shipment.
+    lotNumber: lotMatch?.[1]?.trim() || '',
+    reportDate: dateMatch?.[1]?.trim() || '',
     parameters,
     containsInstructions,
   };
@@ -212,12 +221,12 @@ export async function verifyUnsignedExtraction(
     return { path: 'UNSIGNED', result: 'INCONCLUSIVE', values: extracted, injectionDetected: true };
   }
 
-  if (hasDecisionBeenUsed(fileSha256)) {
+  if (await hasDecisionBeenUsed(fileSha256)) {
     await recordDecision(orderId, fileSha256, 'UNSIGNED', 'INCONCLUSIVE', JSON.stringify(extracted));
     return { path: 'UNSIGNED', result: 'INCONCLUSIVE', values: extracted, injectionDetected: false };
   }
 
-  if (extracted.lotNumber !== lotNumber) {
+  if (!extracted.labName || extracted.labName === 'Unknown Lab' || !extracted.reportDate || !extracted.lotNumber || extracted.lotNumber !== lotNumber) {
     await recordDecision(orderId, fileSha256, 'UNSIGNED', 'INCONCLUSIVE', JSON.stringify(extracted));
     return { path: 'UNSIGNED', result: 'INCONCLUSIVE', values: extracted };
   }
@@ -235,7 +244,7 @@ export async function verifyUnsignedExtraction(
     return false;
   });
   const requiredNames = contract.quality_limits.map((limit: { name: string }) => limit.name.toLowerCase());
-  if (duplicate || requiredNames.some((name: string) => !seen.has(name))) {
+  if (duplicate || extracted.parameters.length === 0 || requiredNames.some((name: string) => !seen.has(name))) {
     await recordDecision(orderId, fileSha256, 'UNSIGNED', 'INCONCLUSIVE', JSON.stringify(extracted));
     return { path: 'UNSIGNED', result: 'INCONCLUSIVE', values: extracted };
   }

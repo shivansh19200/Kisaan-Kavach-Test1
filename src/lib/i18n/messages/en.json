@@ -159,6 +159,8 @@
   "seller.orderStatus.title": "Order status",
   "seller.orderStatus.messageCard": "Message",
   "seller.orderStatus.uploadLabReport": "Upload lab report",
+  "seller.labUpload.signedPass": "Registered lab signature and contract checks passed. The first PayPal payment is ready.",
+  "seller.labUpload.unsignedPass": "Quality checks passed, but this report is unsigned. The buyer must review it before payment.",
   "seller.orderStatus.dragDropOrClick": "Drag and drop or click to choose file",
   "seller.orderStatus.takePhoto": "Take photo",
   "seller.orderStatus.chooseFile": "Choose file",

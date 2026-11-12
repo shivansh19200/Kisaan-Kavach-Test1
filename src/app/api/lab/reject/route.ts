@@ -2,16 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { getDb } from '@/lib/db/repo';
 import { transitionOrder, auditLog } from '@/lib/state';
+import { getPublicUrl, isSameOrigin } from '@/lib/public-url';
 
 export async function POST(req: NextRequest) {
   try {
+    if (!isSameOrigin(req)) return NextResponse.json({ error: 'Please refresh the page and try again.' }, { status: 403 });
     const session = await getSession();
     if (!session || session.role !== 'BUYER') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { orderId } = await req.json();
-    const orderIdNum = parseInt(orderId);
+    const isJsonRequest = req.headers.get('content-type')?.includes('application/json') || false;
+    const values = isJsonRequest ? await req.json() : Object.fromEntries(await req.formData());
+    const orderIdNum = parseInt(String(values.orderId));
     if (isNaN(orderIdNum)) {
       return NextResponse.json({ error: 'Invalid order ID' }, { status: 400 });
     }
@@ -26,6 +29,7 @@ export async function POST(req: NextRequest) {
     transitionOrder(orderIdNum, 'VERIFY_PENDING', session.email);
     auditLog({ actor: session.email, orderId: orderIdNum, action: 'LAB_REPORT_REJECTED' });
 
+    if (!isJsonRequest) return NextResponse.redirect(getPublicUrl(req, `/buyer/orders/${orderIdNum}`), 303);
     return NextResponse.json({ success: true, newStatus: 'VERIFY_PENDING' });
   } catch (err) {
     console.error('Reject lab error:', err);

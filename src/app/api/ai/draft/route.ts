@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     }
 
     if ('_error' in result) {
-      return NextResponse.json({ error: result.error || 'Drafting failed' }, { status: 500 });
+      return NextResponse.json({ error: result.error || 'The AI provider could not draft this contract. Check its Render settings.' }, { status: 503 });
     }
 
     return NextResponse.json(result);

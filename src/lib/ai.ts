@@ -69,7 +69,6 @@ async function callLLM<T>(prompt: string, schema: z.ZodSchema<T>, temperature = 
         model: LLM_MODEL,
         messages: [{ role: 'user', content: prompt }],
         temperature,
-        response_format: { type: 'json_object' },
       }),
       signal: AbortSignal.timeout(timeoutMs),
     });
@@ -102,7 +101,6 @@ async function callLLM<T>(prompt: string, schema: z.ZodSchema<T>, temperature = 
             { role: 'user', content: 'The previous response was not valid JSON. Please output only valid JSON matching the schema.' },
           ],
           temperature: 0,
-          response_format: { type: 'json_object' },
         }),
         signal: AbortSignal.timeout(timeoutMs),
       });
@@ -134,13 +132,16 @@ Output only valid JSON.`;
 }
 
 export async function draftContract(plainTerms: string): Promise<LLMResult<z.infer<typeof ContractSchema>>> {
-  const prompt = `Draft a contract from these plain-language terms. Return JSON with: product, quantity, pricePerKg, totalUsd, advancePct, qualityLimits (array of name, limit, unit, type where type is "max" or "min"), labWindowDays.
+  if (!LLM_BASE_URL) return { _error: true, error: 'AI is not configured: add LLM_BASE_URL in Render.' };
+  if (!LLM_API_KEY) return { _error: true, error: 'AI is not configured: add LLM_API_KEY in Render.' };
+  if (!LLM_MODEL) return { _error: true, error: 'AI is not configured: add LLM_MODEL in Render.' };
+
+  const prompt = `Draft a contract from these plain-language terms. Return only a JSON object with: product, quantity, pricePerKg, totalUsd, advancePct, qualityLimits (array of name, limit, unit, type where type is "max" or "min"), labWindowDays. Do not add markdown or commentary.
 
 Terms: "${plainTerms}"
 
 Output only valid JSON.`;
-  const result = await callLLM(prompt, ContractSchema, 0, 8000, false);
-  return '_error' in result ? { _recorded: true, reason: 'provider_unavailable' } : result;
+  return callLLM(prompt, ContractSchema, 0, 12000, true);
 }
 
 export async function rewriteSimply(sourceText: string): Promise<LLMResult<z.infer<typeof SimpleRewriteSchema>>> {

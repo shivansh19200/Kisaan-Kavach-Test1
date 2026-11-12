@@ -62,6 +62,9 @@ export async function POST(req: NextRequest) {
       // Extract text from PDF
       const pdfText = await extractText(rawBytes);
       const fullText = (pdfText.text || []).join('\n');
+      if (!fullText.trim()) {
+        return NextResponse.json({ error: 'This PDF has no readable text. Upload a text-based lab report or a clear report image.' }, { status: 422 });
+      }
 
       // Check if it's a signed JWS (look for JWS pattern in text)
       const jwsMatch = fullText.match(/[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/);
@@ -82,6 +85,20 @@ export async function POST(req: NextRequest) {
       result = await verifySignedJWS(qr.data, orderId, lotNumber, sealNumber);
     }
 
+    if (result.result !== 'PASS') {
+      const error = result.result === 'FAIL'
+        ? 'Lab report verification failed. Its signature, order details, or measured values do not meet this contract. Payment remains blocked.'
+        : 'This file could not be verified as a lab report for this order. Check that it names the matching lot, report date, lab, every contracted test, and includes a valid registered lab signature.';
+      return NextResponse.json({
+        error,
+        result: result.result,
+        path: result.path,
+        values: result.values,
+        snippetChecks: result.snippetChecks,
+        injectionDetected: result.injectionDetected,
+      }, { status: 422 });
+    }
+
     db.prepare('INSERT INTO evidence (order_id, kind, file_sha256, blob, submitted_by) VALUES (?, ?, ?, ?, ?)')
       .run(orderId, 'LAB_REPORT', fileSha256, buffer, session.userId);
 
@@ -100,6 +117,9 @@ export async function POST(req: NextRequest) {
       values: result.values,
       snippetChecks: result.snippetChecks,
       injectionDetected: result.injectionDetected,
+      message: result.path === 'SIGNED'
+        ? 'Signed lab certificate verified. Order, lot, signature, and contract limits match.'
+        : 'Report fields and quality limits passed. The buyer must review this unsigned report before payment can proceed.',
       newStatus,
     });
   } catch (err) {
