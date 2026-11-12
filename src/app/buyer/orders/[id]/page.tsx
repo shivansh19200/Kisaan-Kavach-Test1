@@ -53,7 +53,12 @@ export default async function BuyerOrderPage({ params }: { params: Promise<{ id:
   const orderId = parseInt(id);
 
   const db = getDb();
-  const order = db.prepare('SELECT * FROM orders WHERE id = ? AND buyer_id = ?').get(orderId, session.userId) as any;
+  const order = db.prepare(`
+    SELECT orders.*, sellers.email AS seller_email, sellers.language AS seller_language
+    FROM orders
+    JOIN users AS sellers ON sellers.id = orders.seller_id
+    WHERE orders.id = ? AND orders.buyer_id = ?
+  `).get(orderId, session.userId) as any;
   if (!order) notFound();
 
   const contract = JSON.parse(order.contract_json);
@@ -72,6 +77,9 @@ export default async function BuyerOrderPage({ params }: { params: Promise<{ id:
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-slate-900">Order #{order.id}</h1>
           <p className="text-slate-600">{contract.product} — {contract.quantity}</p>
+          <p className="mt-2 text-sm text-slate-600">
+            {t('buyer.contract.sellerForOrder')}: {t(order.seller_language === 'mr' ? 'buyer.contract.marathiSeller' : 'buyer.contract.hindiSeller')} ({order.seller_email})
+          </p>
         </div>
 
         <OrderStepper currentStep={currentStep} />

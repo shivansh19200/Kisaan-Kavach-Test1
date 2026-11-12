@@ -16,6 +16,7 @@ export async function createOrder(formData: FormData): Promise<number> {
   if (!session || session.role !== 'BUYER') throw new Error('Please sign in as a buyer.');
 
   const product = String(formData.get('product') || '').trim();
+  const sellerId = Number(formData.get('sellerId'));
   const quantity = String(formData.get('quantity') || '').trim();
   const pricePerKg = Number(formData.get('pricePerKg'));
   const totalMinor = toMinorUnits(formData.get('totalUsd'));
@@ -27,6 +28,7 @@ export async function createOrder(formData: FormData): Promise<number> {
   const disputeDays = Number(formData.get('disputeDays'));
 
   if (!product || product.length > 100 || !quantity || quantity.length > 50) throw new Error('Enter a product and quantity.');
+  if (!Number.isInteger(sellerId) || sellerId < 1) throw new Error('Choose a seller for this order.');
   if (!Number.isFinite(pricePerKg) || pricePerKg <= 0 || !totalMinor) throw new Error('Enter a valid price and total.');
   if (!Number.isInteger(advancePct) || advancePct < 1 || advancePct > 99) throw new Error('First payment must be between 1% and 99%.');
 
@@ -57,10 +59,14 @@ export async function createOrder(formData: FormData): Promise<number> {
     seal_id: sealId,
   };
 
-  const result = getDb().prepare(`
+  const db = getDb();
+  const seller = db.prepare("SELECT id FROM users WHERE id = ? AND role = 'SELLER'").get(sellerId);
+  if (!seller) throw new Error('Choose one of the available sellers.');
+
+  const result = db.prepare(`
     INSERT INTO orders (buyer_id, seller_id, status, contract_json, total_minor, currency, advance_pct, batch_id, seal_id, lab_deadline, delivery_expected, dispute_deadline, demo_mode)
     VALUES (?, ?, 'CREATED', ?, ?, 'USD', ?, ?, ?, ?, ?, ?, ?)
-  `).run(session.userId, 2, JSON.stringify(contract), totalMinor, advancePct, batchId, sealId, labDeadline, deliveryExpected, disputeDeadline, process.env.DEMO_MODE === 'true' ? 1 : 0);
+  `).run(session.userId, sellerId, JSON.stringify(contract), totalMinor, advancePct, batchId, sealId, labDeadline, deliveryExpected, disputeDeadline, process.env.DEMO_MODE === 'true' ? 1 : 0);
 
   const orderId = Number(result.lastInsertRowid);
   revalidatePath('/dashboard');

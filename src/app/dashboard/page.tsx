@@ -6,7 +6,7 @@ import { getDb } from '@/lib/db/repo';
 import Link from 'next/link';
 import { t, getLang } from '@/lib/i18n/t';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { Shield, Package, Gavel, LogOut, LayoutDashboard, Plus, Eye } from 'lucide-react';
+import { Shield, Package, Gavel, Plus, Eye } from 'lucide-react';
 import TopBar from '@/components/ui/TopBar';
 import StatusBadge from '@/components/ui/StatusBadge';
 import { createOrder } from '@/app/buyer/orders/new/actions';
@@ -26,7 +26,13 @@ export default async function DashboardPage() {
 
   let orders: any[] = [];
   if (session.role === 'BUYER') {
-    orders = db.prepare('SELECT * FROM orders WHERE buyer_id = ? ORDER BY created_at DESC').all(session.userId) as any[];
+    orders = db.prepare(`
+      SELECT orders.*, sellers.email AS seller_email, sellers.language AS seller_language
+      FROM orders
+      JOIN users AS sellers ON sellers.id = orders.seller_id
+      WHERE orders.buyer_id = ?
+      ORDER BY orders.created_at DESC
+    `).all(session.userId) as any[];
   } else if (session.role === 'SELLER') {
     orders = db.prepare('SELECT * FROM orders WHERE seller_id = ? ORDER BY created_at DESC').all(session.userId) as any[];
   } else if (session.role === 'ARBITER') {
@@ -87,6 +93,7 @@ export default async function DashboardPage() {
                         <StatusBadge status={order.status} />
                       </div>
                       <p className="text-sm text-slate-600">{contract.quantity} @ ${contract.price_per_kg_usd}/kg = {formatCurrency(totalMinor)}</p>
+                      {session.role === 'BUYER' && <p className="mt-1 text-sm text-slate-600">{t('buyer.contract.sellerForOrder')}: {t(order.seller_language === 'mr' ? 'buyer.contract.marathiSeller' : 'buyer.contract.hindiSeller')} ({order.seller_email})</p>}
                       <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
                         <span>Created: {formatDate(order.created_at, lang)}</span>
                         {order.lab_deadline && <span>Lab deadline: {formatDate(order.lab_deadline, lang)}</span>}
@@ -110,12 +117,6 @@ export default async function DashboardPage() {
           </div>
         )}
 
-        <form action="/api/auth/logout" method="POST" className="mt-6">
-          <button type="submit" className="flex items-center gap-2 px-4 py-2 text-sm text-slate-600 hover:text-slate-900">
-            <LogOut className="w-4 h-4" />
-            <span>Sign out</span>
-          </button>
-        </form>
       </main>
     </div>
   );

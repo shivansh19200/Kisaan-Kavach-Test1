@@ -16,6 +16,7 @@ type ContractDraft = {
   qualityLimits: QualityLimit[];
   labWindowDays: number;
 };
+type SellerOption = { id: number; email: string; language: 'hi' | 'mr' };
 
 const starterDraft: ContractDraft = {
   product: 'Organic Turmeric',
@@ -31,12 +32,13 @@ const starterDraft: ContractDraft = {
   labWindowDays: 14,
 };
 
-export default function OrderBuilder() {
+export default function OrderBuilder({ sellers }: { sellers: SellerOption[] }) {
   const [terms, setTerms] = useState(t('buyer.contract.plainTermsPlaceholder'));
   const [draft, setDraft] = useState(starterDraft);
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const [recorded, setRecorded] = useState(false);
+  const [sellerId, setSellerId] = useState(String(sellers[0]?.id || ''));
   const totalMinor = Math.round(draft.totalUsd * 100);
   const firstMinor = Math.floor(totalMinor * draft.advancePct / 100);
   const finalMinor = totalMinor - firstMinor;
@@ -72,6 +74,7 @@ export default function OrderBuilder() {
     try {
       const formData = new FormData();
       formData.set('product', draft.product);
+      formData.set('sellerId', sellerId);
       formData.set('quantity', draft.quantity);
       formData.set('pricePerKg', String(draft.pricePerKg));
       formData.set('totalUsd', String(draft.totalUsd));
@@ -126,6 +129,12 @@ export default function OrderBuilder() {
             <Field label={`${t('buyer.contract.pricePerKg')} (USD)`} type="number" value={draft.pricePerKg} onChange={(value) => change('pricePerKg', Number(value))} />
             <Field label={`${t('buyer.contract.total')} (USD)`} type="number" value={draft.totalUsd} onChange={(value) => change('totalUsd', Number(value))} />
           </div>
+          <label htmlFor="seller-for-order" className="mt-4 block text-sm font-medium text-slate-700">
+            {t('buyer.contract.sellerForOrder')}
+            <select id="seller-for-order" value={sellerId} onChange={(event) => setSellerId(event.target.value)} className="mt-1.5 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-100">
+              {sellers.map((seller) => <option key={seller.id} value={seller.id}>{t(seller.language === 'hi' ? 'buyer.contract.hindiSeller' : 'buyer.contract.marathiSeller')} — {seller.email}</option>)}
+            </select>
+          </label>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <Amount label={t('buyer.contract.firstPayment')} value={formatCurrency(firstMinor)} tone="green" />
             <Amount label={t('buyer.contract.finalPayment')} value={formatCurrency(finalMinor)} tone="blue" />
@@ -142,7 +151,7 @@ export default function OrderBuilder() {
       </div>
 
       <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-        <button type="button" onClick={confirmContract} disabled={busy || !draft.product.trim() || !draft.quantity.trim() || draft.totalUsd <= 0} className="flex min-h-14 w-full items-center justify-center gap-3 rounded-xl bg-emerald-800 px-6 py-4 text-center font-semibold text-white hover:bg-emerald-900 disabled:opacity-60"><CheckCircle2 size={20} />{t('buyer.contract.confirmAndReserve')}<ArrowRight size={18} /></button>
+        <button type="button" onClick={confirmContract} disabled={busy || !sellerId || !draft.product.trim() || !draft.quantity.trim() || draft.totalUsd <= 0} className="flex min-h-14 w-full items-center justify-center gap-3 rounded-xl bg-emerald-800 px-6 py-4 text-center font-semibold text-white hover:bg-emerald-900 disabled:opacity-60"><CheckCircle2 size={20} />{t('buyer.contract.confirmAndReserve')}<ArrowRight size={18} /></button>
         <p className="mt-3 text-center text-sm text-slate-600">{t('buyer.contract.reserveNotePending')}</p>
       </section>
     </>

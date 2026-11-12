@@ -102,6 +102,7 @@ class RealPaypalClient implements PaypalClient {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: 'grant_type=client_credentials',
+      signal: AbortSignal.timeout(10000),
     });
     if (!res.ok) {
       const text = await res.text();
@@ -127,6 +128,7 @@ class RealPaypalClient implements PaypalClient {
     }
     const res = await fetch(`${this.baseUrl}${path}`, {
       ...options,
+      signal: options.signal || AbortSignal.timeout(10000),
       headers: { ...headers, ...(options.headers as Record<string, string> || {}) },
     });
     if (!res.ok) {
@@ -315,10 +317,12 @@ let clientInstance: PaypalClient | null = null;
 
 export function getPaypalClient(): PaypalClient {
   if (clientInstance) return clientInstance;
-  if (process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET) {
+  if (process.env.DEMO_MODE === 'true') {
+    clientInstance = new MockPaypalClient();
+  } else if (process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET) {
     clientInstance = new RealPaypalClient();
   } else {
-    clientInstance = new MockPaypalClient();
+    throw new Error('PayPal credentials are required when demo mode is off.');
   }
   return clientInstance;
 }

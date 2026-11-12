@@ -6,8 +6,15 @@ import { auditLog } from '@/lib/state';
 
 export async function POST(req: NextRequest) {
   try {
-    const origin = req.headers.get('origin');
-    if (origin && new URL(origin).origin !== new URL(req.url).origin) {
+    const originHeader = req.headers.get('origin');
+    const allowedOrigins = new Set([new URL(req.url).origin]);
+    if (process.env.APP_URL) allowedOrigins.add(new URL(process.env.APP_URL).origin);
+
+    const forwardedHost = req.headers.get('x-forwarded-host')?.split(',')[0]?.trim();
+    const forwardedProto = req.headers.get('x-forwarded-proto')?.split(',')[0]?.trim();
+    if (forwardedHost && forwardedProto) allowedOrigins.add(`${forwardedProto}://${forwardedHost}`);
+
+    if (originHeader && !allowedOrigins.has(new URL(originHeader).origin)) {
       return NextResponse.json({ error: 'Please refresh the page and try again.' }, { status: 403 });
     }
     const session = await getSession();

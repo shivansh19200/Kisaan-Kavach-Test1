@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
+import { ArrowLeft, LogOut } from 'lucide-react';
 import { t, getLang, setLang, SUPPORTED_LANGS } from '@/lib/i18n/t';
 
 export default function TopBar({ role, currentPath }: { role: 'BUYER' | 'SELLER' | 'ARBITER'; currentPath: string }) {
@@ -69,11 +71,23 @@ export default function TopBar({ role, currentPath }: { role: 'BUYER' | 'SELLER'
 
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-slate-200 px-4 py-3">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+      <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
             {roleLabels[role]}
           </span>
+          {currentPath !== '/dashboard' && (
+            <Link href="/dashboard" className="inline-flex min-h-12 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+              <ArrowLeft className="h-4 w-4" />
+              <span>{t('topbar.backToDashboard')}</span>
+            </Link>
+          )}
+          <form action="/api/auth/logout" method="POST">
+            <button type="submit" className="inline-flex min-h-12 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+              <LogOut className="h-4 w-4" />
+              <span>{t('topbar.signOut')}</span>
+            </button>
+          </form>
         </div>
 
         <div className="flex items-center gap-3">

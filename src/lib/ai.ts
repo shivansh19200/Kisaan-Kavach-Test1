@@ -4,6 +4,7 @@ import { getDb } from './db/repo';
 const LLM_BASE_URL = process.env.LLM_BASE_URL || '';
 const LLM_API_KEY = process.env.LLM_API_KEY || '';
 const LLM_MODEL = process.env.LLM_MODEL || 'gemini-3.7-flash';
+const LLM_CHAT_URL = `${LLM_BASE_URL.replace(/\/+$/, '')}/chat/completions`;
 
 const ExtractSchema = z.object({
   labName: z.string(),
@@ -50,13 +51,13 @@ const DisputeSummarySchema = z.object({
 
 type LLMResult<T> = T | { _recorded: true } | { _error: true; error: string };
 
-async function callLLM<T>(prompt: string, schema: z.ZodSchema<T>, temperature = 0): Promise<LLMResult<T>> {
-  if (!LLM_API_KEY) {
+async function callLLM<T>(prompt: string, schema: z.ZodSchema<T>, temperature = 0, timeoutMs = 20000, repairInvalidJson = true): Promise<LLMResult<T>> {
+  if (!LLM_API_KEY || !LLM_BASE_URL) {
     return { _recorded: true };
   }
 
   try {
-    const res = await fetch(`${LLM_BASE_URL}chat/completions`, {
+    const res = await fetch(LLM_CHAT_URL, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${LLM_API_KEY}`,
@@ -68,7 +69,7 @@ async function callLLM<T>(prompt: string, schema: z.ZodSchema<T>, temperature = 
         temperature,
         response_format: { type: 'json_object' },
       }),
-      signal: AbortSignal.timeout(20000),
+      signal: AbortSignal.timeout(timeoutMs),
     });
 
     if (!res.ok) {
@@ -84,7 +85,8 @@ async function callLLM<T>(prompt: string, schema: z.ZodSchema<T>, temperature = 
     try {
       parsed = JSON.parse(content);
     } catch {
-      const repairRes = await fetch(`${LLM_BASE_URL}chat/completions`, {
+      if (!repairInvalidJson) throw new Error('The AI response was not valid JSON.');
+      const repairRes = await fetch(LLM_CHAT_URL, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${LLM_API_KEY}`,
@@ -100,7 +102,7 @@ async function callLLM<T>(prompt: string, schema: z.ZodSchema<T>, temperature = 
           temperature: 0,
           response_format: { type: 'json_object' },
         }),
-        signal: AbortSignal.timeout(20000),
+        signal: AbortSignal.timeout(timeoutMs),
       });
       if (repairRes.ok) {
         const repairData = await repairRes.json();
@@ -135,7 +137,8 @@ export async function draftContract(plainTerms: string): Promise<LLMResult<z.inf
 Terms: "${plainTerms}"
 
 Output only valid JSON.`;
-  return callLLM(prompt, ContractSchema);
+  const result = await callLLM(prompt, ContractSchema, 0, 8000, false);
+  return '_error' in result ? { _recorded: true } : result;
 }
 
 export async function rewriteSimply(sourceText: string): Promise<LLMResult<z.infer<typeof SimpleRewriteSchema>>> {
