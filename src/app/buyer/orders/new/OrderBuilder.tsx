@@ -60,7 +60,10 @@ export default function OrderBuilder({ sellers }: { sellers: SellerOption[] }) {
       if (!response.ok) throw new Error(result.error || 'Could not draft the contract. Please try again.');
       setDraft(result);
       setRecorded(Boolean(result._recorded));
-      setNotice(t(result._recorded ? 'buyer.contract.recordedNotice' : 'buyer.contract.draftReady'));
+      const notice = result._recorded
+        ? `${t('buyer.contract.recordedNotice')} ${t(result._fallbackReason === 'provider_unavailable' ? 'buyer.contract.aiUnavailable' : 'buyer.contract.aiMissingSettings')}`
+        : t('buyer.contract.draftReady');
+      setNotice(notice);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : t('buyer.contract.draftError'));
     } finally {

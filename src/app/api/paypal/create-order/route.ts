@@ -3,18 +3,11 @@ import { getSession } from '@/lib/auth/session';
 import { getDb } from '@/lib/db/repo';
 import { getPaypalClient } from '@/lib/paypal';
 import { auditLog } from '@/lib/state';
+import { getPublicOrigin, isSameOrigin } from '@/lib/public-url';
 
 export async function POST(req: NextRequest) {
   try {
-    const originHeader = req.headers.get('origin');
-    const allowedOrigins = new Set([new URL(req.url).origin]);
-    if (process.env.APP_URL) allowedOrigins.add(new URL(process.env.APP_URL).origin);
-
-    const forwardedHost = req.headers.get('x-forwarded-host')?.split(',')[0]?.trim();
-    const forwardedProto = req.headers.get('x-forwarded-proto')?.split(',')[0]?.trim();
-    if (forwardedHost && forwardedProto) allowedOrigins.add(`${forwardedProto}://${forwardedHost}`);
-
-    if (originHeader && !allowedOrigins.has(new URL(originHeader).origin)) {
+    if (!isSameOrigin(req)) {
       return NextResponse.json({ error: 'Please refresh the page and try again.' }, { status: 403 });
     }
     const session = await getSession();
@@ -38,8 +31,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Order cannot be authorized from status ${order.status}` }, { status: 400 });
     }
 
-    const returnUrl = `${process.env.APP_URL || new URL(req.url).origin}/api/paypal/authorize?orderId=${orderIdNum}`;
-    const cancelUrl = `${process.env.APP_URL}/buyer/orders/${orderIdNum}?paypal=cancel`;
+    const publicOrigin = getPublicOrigin(req);
+    const returnUrl = `${publicOrigin}/api/paypal/authorize?orderId=${orderIdNum}`;
+    const cancelUrl = `${publicOrigin}/buyer/orders/${orderIdNum}?paypal=cancel`;
 
     const client = getPaypalClient();
     const result = await client.createOrder({

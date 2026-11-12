@@ -139,6 +139,8 @@
   "buyer.contract.recordedNotice": "Showing a recorded example. Please review every field.",
   "buyer.contract.draftReady": "Draft ready. Please review every field before continuing.",
   "buyer.contract.draftError": "Could not draft the contract. Please try again.",
+  "buyer.contract.aiMissingSettings": "AI settings are incomplete. Check LLM_BASE_URL, LLM_API_KEY, and LLM_MODEL in Render.",
+  "buyer.contract.aiUnavailable": "The AI service did not return a usable draft.",
   "buyer.contract.createError": "Could not create the order. Please try again.",
   "buyer.orderStatus.title": "Order status",
   "buyer.orderStatus.progressSteps": "Contract → Payment reserved → Lab report check → First payment paid → Delivered → Final payment paid",

@@ -74,11 +74,13 @@ Or click "Reset" on the dashboard (visible in DEMO_MODE).
 See `.env.example` for all variables. Key ones:
 
 - `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_API_BASE` — **Required for real PayPal sandbox**
-- `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL` — LLM endpoint (e.g., Google Gemini, OpenAI)
+- `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL` — all three are needed for live AI drafting. Use the provider's OpenAI-compatible base URL; the app adds `/chat/completions` itself. Set `LLM_MODEL` to a model name supported by that provider.
 - `SESSION_SECRET` — 32+ char random string
 - `DEMO_MODE=true` — Enables demo logins and seeded data
 - `CAPTURE_MODE=TWO_STAGE` — or `SINGLE` if preflight shows two-stage fails
 - `LAB_REGISTRY_PUBLIC_KEYS` — JSON object mapping `kid` to Ed25519 public key (PEM format)
+
+If the AI settings are missing or the provider does not return a usable response, the contract page shows a marked sample draft and explains why it used the sample. It never presents the sample as a live AI result.
 
 ## Real vs Simulated
 

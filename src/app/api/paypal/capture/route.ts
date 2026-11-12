@@ -4,11 +4,11 @@ import { getDb } from '@/lib/db/repo';
 import { getPaypalClient } from '@/lib/paypal';
 import { getCurrentAuthorization, recordCapture, transitionOrder, recordLedgerEntry } from '@/lib/state';
 import { auditLog } from '@/lib/audit';
+import { isSameOrigin } from '@/lib/public-url';
 
 export async function POST(req: NextRequest) {
   try {
-    const origin = req.headers.get('origin');
-    if (origin && new URL(origin).origin !== new URL(req.url).origin) {
+    if (!isSameOrigin(req)) {
       return NextResponse.json({ error: 'Please refresh the page and try again.' }, { status: 403 });
     }
     const session = await getSession();

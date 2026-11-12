@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     const result = await draftContract(plainTerms);
 
     if (isRecordedAI(result)) {
-      return NextResponse.json({ ...RECORDED_CONTRACT, _recorded: true });
+      return NextResponse.json({ ...RECORDED_CONTRACT, _recorded: true, _fallbackReason: result.reason });
     }
 
     if ('_error' in result) {

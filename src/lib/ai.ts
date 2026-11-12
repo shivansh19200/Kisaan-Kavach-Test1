@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import { getDb } from './db/repo';
 
-const LLM_BASE_URL = process.env.LLM_BASE_URL || '';
-const LLM_API_KEY = process.env.LLM_API_KEY || '';
-const LLM_MODEL = process.env.LLM_MODEL || 'gemini-3.7-flash';
+const LLM_BASE_URL = process.env.LLM_BASE_URL?.trim() || '';
+const LLM_API_KEY = process.env.LLM_API_KEY?.trim() || '';
+const LLM_MODEL = process.env.LLM_MODEL?.trim() || '';
 const LLM_CHAT_URL = `${LLM_BASE_URL.replace(/\/+$/, '')}/chat/completions`;
 
 const ExtractSchema = z.object({
@@ -49,12 +49,14 @@ const DisputeSummarySchema = z.object({
   recommendation: z.enum(['refund', 'pay_seller', 'escalate']),
 });
 
-type LLMResult<T> = T | { _recorded: true } | { _error: true; error: string };
+type AIFallbackReason = 'missing_base_url' | 'missing_api_key' | 'missing_model' | 'provider_unavailable';
+type RecordedAIResult = { _recorded: true; reason: AIFallbackReason };
+type LLMResult<T> = T | RecordedAIResult | { _error: true; error: string };
 
 async function callLLM<T>(prompt: string, schema: z.ZodSchema<T>, temperature = 0, timeoutMs = 20000, repairInvalidJson = true): Promise<LLMResult<T>> {
-  if (!LLM_API_KEY || !LLM_BASE_URL) {
-    return { _recorded: true };
-  }
+  if (!LLM_BASE_URL) return { _recorded: true, reason: 'missing_base_url' };
+  if (!LLM_API_KEY) return { _recorded: true, reason: 'missing_api_key' };
+  if (!LLM_MODEL) return { _recorded: true, reason: 'missing_model' };
 
   try {
     const res = await fetch(LLM_CHAT_URL, {
@@ -138,7 +140,7 @@ Terms: "${plainTerms}"
 
 Output only valid JSON.`;
   const result = await callLLM(prompt, ContractSchema, 0, 8000, false);
-  return '_error' in result ? { _recorded: true } : result;
+  return '_error' in result ? { _recorded: true, reason: 'provider_unavailable' } : result;
 }
 
 export async function rewriteSimply(sourceText: string): Promise<LLMResult<z.infer<typeof SimpleRewriteSchema>>> {
@@ -191,7 +193,7 @@ export function validateSimpleRewrite(source: string, rewritten: string): { vali
   return { valid: true };
 }
 
-export function isRecordedAI(result: any): boolean {
+export function isRecordedAI(result: any): result is RecordedAIResult {
   return result?._recorded === true;
 }
 

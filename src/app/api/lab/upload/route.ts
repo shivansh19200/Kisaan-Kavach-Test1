@@ -8,11 +8,11 @@ import { transitionOrder } from '@/lib/state';
 import { extractUnsignedPdf, verifySignedJWS, verifyUnsignedExtraction, sha256 } from '@/lib/verifier';
 import { hasDecisionBeenUsed } from '@/lib/state';
 import { extractText } from 'unpdf';
+import { isSameOrigin } from '@/lib/public-url';
 
 export async function POST(req: NextRequest) {
   try {
-    const origin = req.headers.get('origin');
-    if (origin && new URL(origin).origin !== new URL(req.url).origin) {
+    if (!isSameOrigin(req)) {
       return NextResponse.json({ error: 'Please refresh the page and try again.' }, { status: 403 });
     }
     const session = await getSession();

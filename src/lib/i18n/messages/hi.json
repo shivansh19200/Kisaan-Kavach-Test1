@@ -139,6 +139,8 @@
   "buyer.contract.recordedNotice": "रिकॉर्ड किया हुआ उदाहरण दिख रहा है। हर जानकारी जाँचें।",
   "buyer.contract.draftReady": "मसौदा तैयार है। आगे बढ़ने से पहले हर जानकारी जाँचें।",
   "buyer.contract.draftError": "मसौदा नहीं बन सका। कृपया फिर कोशिश करें।",
+  "buyer.contract.aiMissingSettings": "AI सेटिंग अधूरी हैं। Render में LLM_BASE_URL, LLM_API_KEY और LLM_MODEL जाँचें।",
+  "buyer.contract.aiUnavailable": "AI सेवा से उपयोग करने योग्य मसौदा नहीं मिला।",
   "buyer.contract.createError": "ऑर्डर नहीं बन सका। कृपया फिर कोशिश करें।",
   "buyer.orderStatus.title": "ऑर्डर स्थिति",
   "buyer.orderStatus.progressSteps": "अनुबंध → भुगतान रिज़र्व्ड → लैब रिपोर्ट जाँच → पहला भुगतान हुआ → डिलीवर → अंतिम भुगतान हुआ",
