@@ -36,7 +36,7 @@ const starterDraft: ContractDraft = {
 };
 
 export default function OrderBuilder({ sellers, exchangeRate, language }: { sellers: SellerOption[]; exchangeRate: USDINRReferenceRate | null; language: SupportedLang }) {
-  const tr = (key: string) => t(key, undefined, language);
+  const tr = (key: string, params?: Record<string, string | number>) => t(key, params, language);
   const [terms, setTerms] = useState(t('buyer.contract.plainTermsPlaceholder', undefined, language));
   const [draft, setDraft] = useState(starterDraft);
   const [notice, setNotice] = useState('');
@@ -76,10 +76,12 @@ export default function OrderBuilder({ sellers, exchangeRate, language }: { sell
       if (!response.ok) throw new Error(result.error || 'Could not draft the contract. Please try again.');
       const calculatedMinor = calculateUsdMinor(result.quantity, result.pricePerKg);
       setDraft({ ...result, totalUsd: calculatedMinor === null ? 0 : calculatedMinor / 100 });
-      setRecorded(Boolean(result._recorded));
-      const notice = result._recorded
-        ? `${tr('buyer.contract.recordedNotice')} ${tr(result._fallbackReason === 'provider_unavailable' ? 'buyer.contract.aiUnavailable' : 'buyer.contract.aiMissingSettings')}`
-        : tr('buyer.contract.draftReady');
+      setRecorded(Boolean(result._recorded || result._assisted));
+      const notice = result._assisted
+        ? tr('buyer.contract.assistedDraftNotice')
+        : result._recorded
+          ? `${tr('buyer.contract.recordedNotice')} ${tr(result._fallbackReason === 'provider_unavailable' ? 'buyer.contract.aiUnavailable' : 'buyer.contract.aiMissingSettings')}`
+          : tr('buyer.contract.draftReady');
       setNotice(notice);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : tr('buyer.contract.draftError'));
@@ -139,7 +141,7 @@ export default function OrderBuilder({ sellers, exchangeRate, language }: { sell
           <button type="button" onClick={draftWithAi} disabled={busy || !terms.trim()} className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-purple-700 px-4 py-3 font-semibold text-white hover:bg-purple-800 disabled:cursor-wait disabled:opacity-60">
             {busy ? <LoaderCircle className="animate-spin" size={18} /> : <Sparkles size={18} />}{busy ? tr('common.loading') : tr('buyer.contract.draftWithAI')}
           </button>
-          {notice && <p role="status" className="mt-3 rounded-lg bg-purple-50 p-3 text-sm text-purple-900">{notice}{recorded && <span className="ml-2 rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900">Recorded AI Output</span>}</p>}
+          {notice && <p role="status" className="mt-3 rounded-lg bg-purple-50 p-3 text-sm text-purple-900">{notice}{recorded && <span className="ml-2 rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900">{tr('buyer.contract.assistedDraftBadge')}</span>}</p>}
         </section>
 
         <section className="rounded-2xl border border-purple-200 bg-white p-6 shadow-sm">
@@ -188,7 +190,15 @@ export default function OrderBuilder({ sellers, exchangeRate, language }: { sell
 
       <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
         <button type="button" onClick={confirmContract} disabled={busy || !sellerId || !draft.product.trim() || !totalMinor} className="flex min-h-14 w-full items-center justify-center gap-3 rounded-xl bg-emerald-800 px-6 py-4 text-center font-semibold text-white hover:bg-emerald-900 disabled:opacity-60"><CheckCircle2 size={20} />{tr('buyer.contract.confirmAndReserve')}<ArrowRight size={18} /></button>
-        <p className="mt-3 text-center text-sm text-slate-600">{tr('buyer.contract.reserveNotePending')}</p>
+        <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          {tr('buyer.contract.paypalReservationExplainer', {
+            total: formatCurrency(totalMinor, 'USD', language),
+            firstPercent: draft.advancePct,
+            firstAmount: formatCurrency(firstMinor, 'USD', language),
+            finalPercent: 100 - draft.advancePct,
+            finalAmount: formatCurrency(finalMinor, 'USD', language),
+          })}
+        </p>
         <p className="mt-2 text-center text-xs text-slate-500">{tr('currency.paypalNote')}</p>
       </section>
     </>

@@ -15,6 +15,7 @@ export interface CreateOrderParams {
   orderId: number;
   totalMinor: number;
   currency: string;
+  description?: string;
   returnUrl: string;
   cancelUrl: string;
   customId: string;
@@ -146,6 +147,7 @@ class RealPaypalClient implements PaypalClient {
       purchase_units: [{
         ...(merchantEmail ? { payee: { email_address: merchantEmail } } : {}),
         amount: { currency_code: params.currency, value: (params.totalMinor / 100).toFixed(2) },
+        ...(params.description ? { description: params.description.slice(0, 127) } : {}),
         custom_id: params.customId,
       }],
       application_context: {

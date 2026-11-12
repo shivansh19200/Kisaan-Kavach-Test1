@@ -76,7 +76,7 @@ export default async function BuyerOrderPage({ params, searchParams }: { params:
     getServerLang(session.language),
     getUsdInrReferenceRate(),
   ]);
-  const tr = (key: string) => t(key, undefined, lang);
+  const tr = (key: string, params?: Record<string, string | number>) => t(key, params, lang);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -105,6 +105,17 @@ export default async function BuyerOrderPage({ params, searchParams }: { params:
               reservedUntil={authorization?.expiration_time}
             />
             <CurrencyEstimate amountMinor={totalMinor} reference={exchangeRate} language={lang} />
+            {['CREATED', 'AUTHORIZED', 'VERIFY_PENDING', 'AWAITING_APPROVAL', 'LAB_PASSED'].includes(order.status) && (
+              <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+                {tr(order.status === 'CREATED' ? 'buyer.orderStatus.installmentPlanPending' : 'buyer.orderStatus.installmentPlanConfirmed', {
+                  total: formatCurrency(totalMinor, 'USD', lang),
+                  firstPercent: order.advance_pct,
+                  firstAmount: formatCurrency(firstPaymentMinor, 'USD', lang),
+                  finalPercent: 100 - order.advance_pct,
+                  finalAmount: formatCurrency(finalPaymentMinor, 'USD', lang),
+                })}
+              </p>
+            )}
             {authorization && <p className="mt-4 text-sm text-slate-500">{tr('buyer.orderStatus.paypalReference')}: <span className="font-mono text-slate-700">{authorization.paypal_authorization_id}</span></p>}
             {order.status === 'CREATED' && (query.payment === 'failed' || query.paypal === 'cancel') && <p role="alert" className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900">{tr('buyer.orderStatus.paymentFailed')}</p>}
             {order.status === 'CREATED' && query.payment === 'checking' && <p role="status" className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">{tr('buyer.orderStatus.paymentChecking')}</p>}

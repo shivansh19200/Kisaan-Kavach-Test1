@@ -36,10 +36,13 @@ export async function POST(req: NextRequest) {
     const cancelUrl = `${publicOrigin}/buyer/orders/${orderIdNum}?paypal=cancel`;
 
     const client = getPaypalClient();
+    const firstAmountMinor = Math.floor(order.total_minor * (order.advance_pct || 30) / 100);
+    const finalAmountMinor = order.total_minor - firstAmountMinor;
     const result = await client.createOrder({
       orderId: orderIdNum,
       totalMinor: order.total_minor,
       currency: order.currency,
+      description: `Full order amount reserved; ${order.advance_pct || 30}% (${(firstAmountMinor / 100).toFixed(2)} ${order.currency}) after lab approval, ${100 - (order.advance_pct || 30)}% (${(finalAmountMinor / 100).toFixed(2)} ${order.currency}) after delivery.`,
       returnUrl,
       cancelUrl,
       customId: `order-${orderIdNum}`,
