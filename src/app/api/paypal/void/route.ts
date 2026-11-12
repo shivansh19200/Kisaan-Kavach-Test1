@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No active authorization' }, { status: 400 });
     }
 
-    const captures = db.prepare('SELECT * FROM captures WHERE order_id = ? AND status = "COMPLETED"').all(orderIdNum) as any[];
+    const captures = db.prepare("SELECT * FROM captures WHERE order_id = ? AND status = 'COMPLETED'").all(orderIdNum) as any[];
     if (captures.length > 0) {
       return NextResponse.json({ error: 'Cannot void after capture; use refund instead' }, { status: 400 });
     }

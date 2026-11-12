@@ -16,7 +16,7 @@ export async function acceptClaim(formData: FormData) {
   if (!order || order.status !== 'DISPUTED') return;
 
   const firstPaymentMinor = Math.floor(order.total_minor * (order.advance_pct || 30) / 100);
-  const capture = db.prepare('SELECT * FROM captures WHERE order_id = ? AND stage = 1 AND status = "COMPLETED"').get(orderId) as any;
+  const capture = db.prepare("SELECT * FROM captures WHERE order_id = ? AND stage = 1 AND status = 'COMPLETED'").get(orderId) as any;
   if (!capture) return;
 
   try {

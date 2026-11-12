@@ -30,7 +30,7 @@ export default async function DashboardPage() {
   } else if (session.role === 'SELLER') {
     orders = db.prepare('SELECT * FROM orders WHERE seller_id = ? ORDER BY created_at DESC').all(session.userId) as any[];
   } else if (session.role === 'ARBITER') {
-    orders = db.prepare('SELECT * FROM orders WHERE status = "DISPUTED" ORDER BY updated_at DESC').all() as any[];
+    orders = db.prepare("SELECT * FROM orders WHERE status = 'DISPUTED' ORDER BY updated_at DESC").all() as any[];
   }
 
   const lang = getLang();

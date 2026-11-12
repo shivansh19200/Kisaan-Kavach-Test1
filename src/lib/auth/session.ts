@@ -20,7 +20,10 @@ export async function createSession(payload: Omit<SessionPayload, 'exp'>) {
     .setIssuedAt()
     .sign(secretKey);
 
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .replace('T', ' ')
+    .replace(/\.\d{3}Z$/, '');
   const db = getDb();
   db.prepare('INSERT INTO sessions (user_id, token, expires_at) VALUES (?, ?, ?)').run(payload.userId, token, expiresAt);
   return token;
@@ -34,7 +37,7 @@ export async function getSession(): Promise<SessionPayload | null> {
   try {
     const { payload } = await jwtVerify(token, secretKey);
     const db = getDb();
-    const session = db.prepare('SELECT * FROM sessions WHERE token = ? AND expires_at > datetime("now")').get(token) as { user_id: number } | undefined;
+    const session = db.prepare("SELECT * FROM sessions WHERE token = ? AND expires_at > datetime('now')").get(token) as { user_id: number } | undefined;
     if (!session) return null;
     return payload as unknown as SessionPayload;
   } catch {

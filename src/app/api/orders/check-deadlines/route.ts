@@ -57,7 +57,7 @@ export async function POST() {
         const orderDetails = db.prepare('SELECT * FROM orders WHERE id = ?').get(order.id) as any;
         const totalMinor = orderDetails.total_minor;
         const advancePct = orderDetails.advance_pct || 30;
-        const capturedMinor = db.prepare('SELECT COALESCE(SUM(amount_minor), 0) as total FROM captures WHERE order_id = ? AND status = "COMPLETED"').get(order.id) as { total: number };
+        const capturedMinor = db.prepare("SELECT COALESCE(SUM(amount_minor), 0) as total FROM captures WHERE order_id = ? AND status = 'COMPLETED'").get(order.id) as { total: number };
         const remainingMinor = totalMinor - capturedMinor.total;
 
         if (remainingMinor > 0) {

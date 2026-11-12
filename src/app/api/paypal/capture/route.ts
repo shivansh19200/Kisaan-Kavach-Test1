@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
       amountMinor = Math.floor(totalMinor * advancePct / 100);
       finalCapture = false;
     } else {
-      const captured = db.prepare('SELECT COALESCE(SUM(amount_minor), 0) as total FROM captures WHERE order_id = ? AND status = "COMPLETED"').get(orderIdNum) as { total: number };
+      const captured = db.prepare("SELECT COALESCE(SUM(amount_minor), 0) as total FROM captures WHERE order_id = ? AND status = 'COMPLETED'").get(orderIdNum) as { total: number };
       amountMinor = totalMinor - captured.total;
       finalCapture = true;
     }

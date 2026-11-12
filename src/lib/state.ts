@@ -46,7 +46,7 @@ export function transitionOrder(orderId: number, newStatus: OrderStatus, actor: 
   }
 
   const before = order.status;
-  const result = db.prepare('UPDATE orders SET status = ?, updated_at = datetime("now") WHERE id = ?').run(newStatus, orderId);
+  const result = db.prepare("UPDATE orders SET status = ?, updated_at = datetime('now') WHERE id = ?").run(newStatus, orderId);
   if (result.changes === 0) return false;
 
   auditLog({ actor, orderId, action: 'STATUS_CHANGE', before, after: newStatus, paypalDebugId });
@@ -138,7 +138,7 @@ export function recordDecision(orderId: number, fileSha256: string, path: 'SIGNE
 
 export function hasDecisionBeenUsed(fileSha256: string): boolean {
   const db = getDb();
-  const decision = db.prepare('SELECT 1 FROM decisions WHERE file_sha256 = ? AND result = "PASS"').get(fileSha256);
+  const decision = db.prepare("SELECT 1 FROM decisions WHERE file_sha256 = ? AND result = 'PASS'").get(fileSha256);
   return !!decision;
 }
 
