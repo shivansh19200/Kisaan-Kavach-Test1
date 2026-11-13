@@ -2,6 +2,8 @@
 
 **Safe payments for rural micro-exports.** A platform where buyer money moves only after quality is verified.
 
+NOTE ON DEMO VIDEO: I was not able to upload the correct link during submission. This is the correct demo video, kindly take this into consideration: https://www.youtube.com/watch?v=xSHawMsEnQg
+
 ## Overview
 
 Kisaan Kavach connects small rural producers (spices, organic tea, Ayurvedic herbs) with overseas buyers. The buyer reserves payment on PayPal. When a lab certificate passes automatic quality checks, the seller gets a first payment (30% default) to cover costs. The final payment follows delivery confirmation. AI reads documents, drafts contracts, and explains status in the farmer's language — but it never decides a payout.
